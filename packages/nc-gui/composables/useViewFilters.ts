@@ -570,7 +570,7 @@ export function useViewFilters(
           // no splice is required here
         } else {
           try {
-            await $api.dbTableFilter.delete(filter.id)
+            await ($api.dbTableFilter as any).delete(filter.id);
             if (!isWebhook && !isLink && !isWidget) reloadData?.()
 
             // find item index by using id and remove it from array since item index may change

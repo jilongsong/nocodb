@@ -103,11 +103,11 @@ const { message: templatedMessage } = useTemplatedMessage(
 
 <template>
   <div class="h-full flex flex-col items-center w-full max-w-[max(33%,688px)] mx-auto">
-    <GeneralFormBanner
+    <!-- <GeneralFormBanner
       v-if="sharedFormView && !parseProp(sharedFormView?.meta).hide_banner"
       :banner-image-url="sharedFormView.banner_image_url"
       class="flex-none dark:border-none"
-    />
+    /> -->
 
     <div
       class="transition-all duration-300 ease-in relative flex flex-col justify-center gap-2 w-full my-6 bg-white dark:bg-transparent rounded-3xl border-1 border-gray-200 px-4 py-8 lg:p-12 md:(p-8 dark:bg-slate-700)"

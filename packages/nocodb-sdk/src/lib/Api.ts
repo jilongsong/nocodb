@@ -10,6 +10,85 @@
  */
 
 /**
+ * Script with additional info
+ */
+export interface ScriptGetResponseV3Type {
+  /** Unique identifier for the script */
+  id: string;
+  /** Title of the script. */
+  title: string;
+  /** Description of the script. */
+  description?: string | null;
+  /** Script content. */
+  script: string;
+  /** Configuration for the script. */
+  config?: object;
+  /** Metadata of the script. */
+  meta?: object;
+  /** Unique identifier for the base */
+  base_id: string;
+  /** Unique identifier for the workspace */
+  workspace_id: string;
+  /**
+   * Timestamp when the script was created
+   * @format date-time
+   */
+  created_at: string;
+  /**
+   * Timestamp when the script was last updated
+   * @format date-time
+   */
+  updated_at: string;
+}
+
+/**
+ * Script update request body
+ */
+export interface ScriptUpdateReqV3Type {
+  /** Title of the script. */
+  title?: string;
+  /** Description of the script. */
+  description?: string | null;
+  /** Script content. */
+  script?: string;
+  /** Configuration for the script. */
+  config?: object;
+  /** Metadata for the script. */
+  meta?: object;
+}
+
+/**
+ * Script create request body
+ */
+export interface ScriptCreateReqV3Type {
+  /** Title of the script. */
+  title: string;
+  /** Description of the script. */
+  description?: string | null;
+  /** Script content. */
+  script?: string;
+  /** Configuration for the script. */
+  config?: object;
+  /** Metadata for the script. */
+  meta?: object;
+}
+
+export interface ScriptListV3Type {
+  list: {
+    /** Unique identifier for the script. */
+    id: string;
+    /** Title of the script. */
+    title: string;
+    /** Description of the script. */
+    description?: string | null;
+    /** Unique identifier for the base to which this script belongs to. */
+    base_id: string;
+    /** Unique identifier for the workspace to which this base belongs to. */
+    workspace_id: string;
+  }[];
+}
+
+/**
  * Workspace roles for the user.
  */
 export enum WorkspaceRolesV3Type {
@@ -19,6 +98,249 @@ export enum WorkspaceRolesV3Type {
   WorkspaceLevelViewer = 'workspace-level-viewer',
   WorkspaceLevelCommenter = 'workspace-level-commenter',
   WorkspaceLevelNoAccess = 'workspace-level-no-access',
+}
+
+/**
+ * Team user relationship
+ */
+export interface TeamUserV3Type {
+  /** Team ID */
+  fk_team_id: string;
+  /** User ID */
+  fk_user_id: string;
+  /** Whether user is team owner */
+  is_owner: boolean;
+  /**
+   * Creation timestamp
+   * @format date-time
+   */
+  created_at?: string;
+  /**
+   * Last update timestamp
+   * @format date-time
+   */
+  updated_at?: string;
+}
+
+/**
+ * Update team members request for v3 API
+ */
+export interface TeamMembersUpdateV3ReqV3Type {
+  /**
+   * User ID to update
+   * @example user123
+   */
+  user_id: string;
+  /**
+   * New team role
+   * @example member
+   */
+  team_role: 'member' | 'owner';
+}
+
+/**
+ * Remove team members request for v3 API
+ */
+export interface TeamMembersRemoveV3ReqV3Type {
+  /**
+   * User ID to remove
+   * @example user123
+   */
+  user_id: string;
+}
+
+/**
+ * Add team members request for v3 API
+ */
+export interface TeamMembersAddV3ReqV3Type {
+  /**
+   * User ID to add
+   * @example xxxx
+   */
+  user_id: string;
+  /**
+   * Team role to assign
+   * @example member
+   */
+  team_role: 'member' | 'owner';
+}
+
+/**
+ * Team member response for v3 API
+ */
+export interface TeamMemberV3ResponseV3Type {
+  /**
+   * User email address
+   * @format email
+   * @example user@nocodb.com
+   */
+  user_email: string;
+  /**
+   * User ID
+   * @example id
+   */
+  user_id: string;
+  /**
+   * Team role
+   * @example member
+   */
+  team_role: 'member' | 'owner';
+}
+
+/**
+ * Team member information for v3 API
+ */
+export interface TeamMemberV3V3Type {
+  /**
+   * User ID
+   * @example xxxx
+   */
+  user_id: string;
+  /**
+   * Team role
+   * @example member
+   */
+  team_role: 'member' | 'owner';
+}
+
+/**
+ * Detailed team information for v3 API
+ */
+export interface TeamDetailV3V3Type {
+  /**
+   * Team name
+   * @example Design Team
+   */
+  title: string;
+  /**
+   * Team icon (emoji or icon identifier)
+   * @example 🎨
+   */
+  icon?: string | null;
+  /**
+   * Team icon type
+   * @example EMOJI
+   */
+  icon_type?: 'EMOJI' | 'ICON' | null;
+  /**
+   * Team badge color (hex code)
+   * @example #FF5733
+   */
+  badge_color?: string;
+  /** Team members */
+  members: TeamMemberV3ResponseV3Type[];
+}
+
+/**
+ * Team update request for v3 API
+ */
+export interface TeamUpdateV3ReqV3Type {
+  /**
+   * Updated team name
+   * @example Updated Team Name
+   */
+  title?: string;
+  /**
+   * Updated team icon (emoji or icon identifier)
+   * @example 🛠️
+   */
+  icon?: string | null;
+  /**
+   * Team icon type
+   * @example EMOJI
+   */
+  icon_type?: 'EMOJI' | 'ICON' | null;
+  /**
+   * Updated team badge color (hex code)
+   * @pattern ^#[0-9A-Fa-f]{6}$
+   * @example #00AEEF
+   */
+  badge_color?: string;
+}
+
+/**
+ * Team creation request for v3 API
+ */
+export interface TeamCreateV3ReqV3Type {
+  /**
+   * Team name
+   * @example Design Team
+   */
+  title: string;
+  /**
+   * Team icon (emoji or icon identifier)
+   * @example 🎨
+   */
+  icon?: string | null;
+  /**
+   * Team icon type
+   * @example EMOJI
+   */
+  icon_type?: 'EMOJI' | 'ICON' | null;
+  /**
+   * Team badge color (hex code)
+   * @pattern ^#[0-9A-Fa-f]{6}$
+   * @example #FF5733
+   */
+  badge_color?: string;
+  /** Initial team members */
+  members?: TeamMemberV3V3Type[];
+}
+
+/**
+ * Team information for v3 API
+ */
+export interface TeamV3V3Type {
+  /**
+   * Unique team identifier
+   * @example t12345
+   */
+  id: string;
+  /**
+   * Team name
+   * @example Design Team
+   */
+  title: string;
+  /**
+   * Team icon (emoji or icon identifier)
+   * @example 🎨
+   */
+  icon?: string | null;
+  /**
+   * Team icon type
+   * @example EMOJI
+   */
+  icon_type?: 'EMOJI' | 'ICON' | null;
+  /**
+   * Team badge color (hex code)
+   * @pattern ^#[0-9A-Fa-f]{6}$
+   * @example #FF5733
+   */
+  badge_color?: string;
+  /**
+   * Number of team members
+   * @example 10
+   */
+  members_count: number;
+  /**
+   * Number of team managers
+   * @example 2
+   */
+  managers_count?: number;
+  /** Organization ID (for Cloud Enterprise) */
+  fk_org_id?: string;
+  /** Workspace ID (for other plans) */
+  fk_workspace_id?: string;
+  /**
+   * Team creation timestamp
+   * @format date-time
+   */
+  created_at?: string;
+  /**
+   * Team last update timestamp
+   * @format date-time
+   */
+  updated_at?: string;
 }
 
 /**
@@ -541,6 +863,12 @@ export type FieldOptionsButtonV3Type =
       icon?: string;
       /** Color of the button */
       color?: string;
+    }
+  | {
+      /** Button type: script */
+      type: 'script';
+      /** ID of the script to trigger */
+      script_id: string;
     };
 
 export interface FieldOptionsRollupV3Type {
@@ -1006,8 +1334,6 @@ export type ViewV3Type = {
   id: string;
   /** Id of table associated with the view. */
   table_id?: string;
-  /** Indicates if this is the default view. Omitted if not the default view. */
-  is_default?: boolean;
 } & ViewBaseV3Type & {
     /** User ID of the creator. */
     created_by?: string;
@@ -1405,8 +1731,6 @@ export interface ViewListV3Type {
     type: 'grid' | 'gallery' | 'kanban' | 'calendar' | 'form';
     /** View configuration edit state. */
     lock_type: 'collaborative' | 'locked' | 'personal';
-    /** Indicates if this is the default view. */
-    is_default?: boolean;
     /** User ID of the creator. */
     created_by: string;
     /** User ID of the owner. Applicable only for personal views. */
@@ -4725,6 +5049,11 @@ export interface ViewCreateReqType {
   fk_geo_data_col_id?: StringOrNullType;
   /** Calendar Range or Null */
   calendar_range?: CalendarRangeOrNullType;
+  /**
+   * Description of the view.
+   * @example This is a grid view.
+   */
+  description?: TextOrNullType;
 }
 
 /**

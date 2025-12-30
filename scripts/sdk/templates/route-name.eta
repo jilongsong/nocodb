@@ -34,8 +34,12 @@ const createCustomOperationId = (method, route, moduleName) => {
     : _.camelCase(_.lowerCase(method) + "_" + [moduleName].join("_")) || "index";
 };
 
-if (operationId)
-  return _.camelCase(operationId.replace(tags.length ? tags[0].toLowerCase().replace(/\W+/g,'-' ) + '-': '', ''));
+if (operationId) {
+  // Remove tag prefix from operationId (e.g., "auth-signup" -> "signup" when tag is "Auth")
+  const tagPrefix = tags.length ? tags[0].toLowerCase().replace(/\W+/g, '-') + '-' : '';
+  const cleanedOperationId = operationId.startsWith(tagPrefix) ? operationId.slice(tagPrefix.length) : operationId;
+  return _.camelCase(cleanedOperationId);
+}
 if (route === "/")
   return _.camelCase(`${_.lowerCase(method)}Root`);
 

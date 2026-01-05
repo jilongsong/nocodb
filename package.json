@@ -31,7 +31,7 @@
     ]
   },
   "scripts": {
-    "bootstrap": "pnpm --filter=nocodb-sdk install && pnpm --filter=nocodb-sdk run build && pnpm --filter=nocodb --filter=nc-mail-templates --filter=nc-gui --filter=playwright install && pnpm run integrations:build && pnpm run registerIntegrations",
+    "bootstrap": "pnpm --filter=nocodb-sdk install && pnpm --filter=nocodb-sdk run build && pnpm --filter=nocodb --filter=nc-mail-templates --filter=nc-gui --filter=nocodb-ui --filter=playwright install && pnpm run integrations:build && pnpm run registerIntegrations",
     "integrations:build": "cd ./packages/noco-integrations/ && pnpm i && pnpm run build",
     "start:frontend": "pnpm --filter=nc-gui run dev",
     "start:frontend-ui": "pnpm --filter=nocodb-ui run dev",
@@ -86,7 +86,7 @@
       "@babel/helpers@<7.26.10": ">=7.26.10",
       "vite@>=6.0.0 <=6.1.5": ">=6.1.6",
       "vite@>=6.1.0 <6.1.4": ">=6.1.4",
-      "@types/mime": "npm:@types/mime@npm:nonexistent"
+      "@types/mime": "npm:@types/mime@^3"
     },
     "onlyBuiltDependencies": [
       "@nestjs/core",

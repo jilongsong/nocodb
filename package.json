@@ -34,6 +34,7 @@
     "bootstrap": "pnpm --filter=nocodb-sdk install && pnpm --filter=nocodb-sdk run build && pnpm --filter=nocodb --filter=nc-mail-templates --filter=nc-gui --filter=playwright install && pnpm run integrations:build && pnpm run registerIntegrations",
     "integrations:build": "cd ./packages/noco-integrations/ && pnpm i && pnpm run build",
     "start:frontend": "pnpm --filter=nc-gui run dev",
+    "start:frontend-ui": "pnpm --filter=nocodb-ui run dev",
     "start:backend": "pnpm --filter=nocodb run start",
     "lint:staged:playwright": "cd ./tests/playwright; pnpm dlx lint-staged; cd -",
     "start:mysql": "docker-compose -f ./tests/playwright/scripts/docker-compose-mysql-playwright.yml up -d",

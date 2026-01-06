@@ -1,16 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Plus, Download, Database, Loader2, FolderOpen } from "lucide-react";
+import { Plus, Download, Database, Loader2, FolderOpen, MoreHorizontal, Star, Clock, ArrowRight } from "lucide-react";
 import { Button } from "@/app/components/ui";
 import { useBases } from "@/app/composables/useBases";
-import { useWorkspace } from "@/app/composables/useWorkspace";
 
 export default function WorkspacePage() {
-  const router = useRouter();
-  const { basesList, loadProjects, isProjectsLoading, createProject, navigateToProject } = useBases();
-  const { isWorkspaceLoading } = useWorkspace();
+  const { basesList, loadProjects, isProjectsLoading, isProjectsLoaded, createProject, navigateToProject } = useBases();
   const [isCreating, setIsCreating] = useState(false);
 
   // 加载项目列表
@@ -22,7 +18,7 @@ export default function WorkspacePage() {
   const handleCreateBase = async () => {
     setIsCreating(true);
     try {
-      const result = await createProject({ title: `New Base ${Date.now()}` });
+      const result = await createProject({ title: `新数据库 ${new Date().toLocaleDateString()}` });
       if (result?.id) {
         await navigateToProject({ baseId: result.id });
       }
@@ -31,128 +27,145 @@ export default function WorkspacePage() {
     }
   };
 
-  const isLoading = isProjectsLoading || isWorkspaceLoading;
+  // 只使用 isProjectsLoading，且只在首次加载时显示 loading
+  const showLoading = isProjectsLoading && !isProjectsLoaded;
 
   return (
-    <div className="p-6">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-          <span className="text-2xl">🚀</span>
-          Getting Started
-        </h1>
-      </div>
-
-      {/* Actions Section */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <ActionCard
-            icon={<Plus className="w-6 h-6 text-blue-500" />}
-            title="Create New Base"
-            description="Start from scratch with a new database."
-            color="blue"
-            onClick={handleCreateBase}
-            disabled={isCreating}
-          />
-          <ActionCard
-            icon={<Download className="w-6 h-6 text-orange-500" />}
-            title="Import Data"
-            description="From files and external sources."
-            color="orange"
-          />
-          <ActionCard
-            icon={<Database className="w-6 h-6 text-green-500" />}
-            title="Connect External Database"
-            description="Real-time connection to external databases."
-            color="green"
-          />
+    <div className="h-full overflow-auto">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Page Header */}
+        <div className="mb-8">
+          <h1 className="text-xl font-semibold text-gray-900">工作区</h1>
+          <p className="text-sm text-gray-500 mt-1">管理您的所有数据库项目</p>
         </div>
-      </section>
 
-      {/* Bases List */}
-      <section>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Bases</h2>
-        <div className="bg-white rounded-lg border border-gray-200">
-          {isLoading ? (
-            <div className="p-8 text-center text-gray-500">
-              <Loader2 className="w-8 h-8 mx-auto mb-4 text-blue-500 animate-spin" />
-              <p>Loading bases...</p>
+        {/* Quick Actions - Compact */}
+        <div className="flex items-center gap-2 mb-6">
+          <Button 
+            variant="primary" 
+            size="sm"
+            onClick={handleCreateBase}
+            loading={isCreating}
+          >
+            <Plus className="w-4 h-4 mr-1.5" />
+            新建数据库
+          </Button>
+          <Button variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-1.5" />
+            导入
+          </Button>
+          <Button variant="outline" size="sm">
+            <Database className="w-4 h-4 mr-1.5" />
+            连接外部数据源
+          </Button>
+        </div>
+
+        {/* Bases Grid */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-700">全部数据库</h2>
+            <span className="text-xs text-gray-400">{basesList.length} 个项目</span>
+          </div>
+
+          {showLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-5 h-5 text-blue-500 animate-spin mr-2" />
+              <span className="text-sm text-gray-500">加载中...</span>
             </div>
           ) : basesList.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Database className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-              <p>No bases yet</p>
-              <Button 
-                variant="primary" 
-                className="mt-4" 
-                onClick={handleCreateBase}
-                loading={isCreating}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create your first base
-              </Button>
-            </div>
+            <EmptyState onCreateBase={handleCreateBase} isCreating={isCreating} />
           ) : (
-            <div className="divide-y divide-gray-100">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {basesList.map((base) => (
-                <button
+                <BaseCard
                   key={base.id}
-                  className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                  title={base.title || "未命名"}
+                  sourcesCount={base.sources?.length || 0}
+                  createdAt={base.created_at}
                   onClick={() => base.id && navigateToProject({ baseId: base.id })}
-                >
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <FolderOpen className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-gray-900 truncate">{base.title}</h3>
-                    <p className="text-sm text-gray-500">
-                      {base.sources?.length || 0} source(s)
-                    </p>
-                  </div>
-                  <div className="text-xs text-gray-400">
-                    {base.created_at && new Date(base.created_at).toLocaleDateString()}
-                  </div>
-                </button>
+                />
               ))}
             </div>
           )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }
 
-function ActionCard({
-  icon,
+function BaseCard({
   title,
-  description,
-  color,
+  sourcesCount,
+  createdAt,
   onClick,
-  disabled,
 }: {
-  icon: React.ReactNode;
   title: string;
-  description: string;
-  color: "blue" | "orange" | "green";
-  onClick?: () => void;
-  disabled?: boolean;
+  sourcesCount: number;
+  createdAt?: string;
+  onClick: () => void;
 }) {
-  const borderColors = {
-    blue: "hover:border-blue-300",
-    orange: "hover:border-orange-300",
-    green: "hover:border-green-300",
-  };
+  const colors = [
+    'bg-blue-500',
+    'bg-purple-500',
+    'bg-green-500',
+    'bg-orange-500',
+    'bg-pink-500',
+    'bg-cyan-500',
+  ];
+  const colorIndex = title.charCodeAt(0) % colors.length;
+  const bgColor = colors[colorIndex];
 
   return (
     <button
-      className={`p-6 bg-white rounded-lg border border-gray-200 text-left transition-all hover:shadow-md ${borderColors[color]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className="group p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all text-left"
       onClick={onClick}
-      disabled={disabled}
     >
-      <div className="mb-3">{icon}</div>
-      <h3 className="font-semibold text-gray-900 mb-1">{title}</h3>
-      <p className="text-sm text-gray-500">{description}</p>
+      <div className="flex items-start gap-3">
+        <div className={`w-9 h-9 rounded-md ${bgColor} flex items-center justify-center flex-shrink-0`}>
+          <span className="text-white font-medium text-sm">
+            {title.charAt(0).toUpperCase()}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 text-sm truncate pr-2">{title}</h3>
+            <ArrowRight className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-xs text-gray-400 flex items-center">
+              <Database className="w-3 h-3 mr-1" />
+              {sourcesCount} 数据源
+            </span>
+            {createdAt && (
+              <span className="text-xs text-gray-400 flex items-center">
+                <Clock className="w-3 h-3 mr-1" />
+                {new Date(createdAt).toLocaleDateString()}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
     </button>
+  );
+}
+
+function EmptyState({ onCreateBase, isCreating }: { onCreateBase: () => void; isCreating: boolean }) {
+  return (
+    <div className="text-center py-16 px-6 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+        <Database className="w-6 h-6 text-gray-400" />
+      </div>
+      <h3 className="text-sm font-medium text-gray-900 mb-1">暂无数据库</h3>
+      <p className="text-sm text-gray-500 mb-4">创建您的第一个数据库开始使用</p>
+      <Button 
+        variant="primary" 
+        size="sm"
+        onClick={onCreateBase}
+        loading={isCreating}
+      >
+        <Plus className="w-4 h-4 mr-1.5" />
+        创建数据库
+      </Button>
+    </div>
   );
 }

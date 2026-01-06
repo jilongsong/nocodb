@@ -1,30 +1,30 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { Plus, Download, Database, Users, Zap, Loader2, Table2, ChevronRight } from "lucide-react";
+import { Plus, Download, Database, Users, Loader2, Table2, ArrowRight, Clock, Grid3X3, FileSpreadsheet } from "lucide-react";
 import { Button, Modal, Input } from "@/app/components/ui";
 import { useBases } from "@/app/composables/useBases";
 import { useTables } from "@/app/composables/useTables";
 
 export default function BasePage({ params }: { params: Promise<{ baseId: string }> }) {
   const { baseId } = use(params);
-  const { loadProject, openedProject, isProjectsLoading } = useBases();
+  const { loadProject, openedProject } = useBases();
   const { loadProjectTables, activeTables, isTablesLoading, createTable, navigateToTable } = useTables();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTableName, setNewTableName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [isBaseLoaded, setIsBaseLoaded] = useState(false);
 
   // 加载 Base 详情和 Tables
   useEffect(() => {
     if (baseId) {
-      loadProject(baseId);
+      loadProject(baseId).then(() => setIsBaseLoaded(true));
       loadProjectTables(baseId);
     }
   }, [baseId, loadProject, loadProjectTables]);
 
   const base = openedProject;
-  const isLoading = isProjectsLoading || !base;
   const defaultSourceId = base?.sources?.[0]?.id;
 
   // 创建表格
@@ -44,102 +44,75 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
     }
   };
 
+  // 获取颜色
+  const getBaseColor = () => {
+    const colors = ['bg-blue-500', 'bg-purple-500', 'bg-green-500', 'bg-orange-500', 'bg-pink-500'];
+    const index = (base?.title?.charCodeAt(0) || 0) % colors.length;
+    return colors[index];
+  };
+
   return (
-    <div className="p-6">
-      {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">
-          {isLoading ? "Loading..." : base?.title || "Untitled Base"}
-        </h1>
-        <p className="text-gray-500 mt-1">管理您的数据库和表格</p>
-      </div>
-
-      {/* Quick Actions */}
-      <section className="mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">快速操作</h2>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            新建表格
-          </Button>
-          <Button variant="outline">
-            <Download className="w-4 h-4 mr-2" />
-            导入数据
-          </Button>
-          <Button variant="outline">
-            <Database className="w-4 h-4 mr-2" />
-            连接外部数据源
-          </Button>
-        </div>
-      </section>
-
-      {/* Tabs Content Area */}
-      <div className="bg-white rounded-lg border border-gray-200 min-h-[400px]">
-        <div className="border-b border-gray-200">
-          <nav className="flex gap-4 px-4">
-            <TabItem active>概览</TabItem>
-            <TabItem>成员</TabItem>
-            <TabItem>数据源</TabItem>
-            <TabItem>设置</TabItem>
-          </nav>
+    <div className="h-full overflow-auto">
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        {/* Page Header - Compact */}
+        <div className="flex items-center gap-4 mb-6">
+          <div className={`w-10 h-10 rounded-lg ${getBaseColor()} flex items-center justify-center`}>
+            <span className="text-white font-semibold">
+              {(base?.title || 'U').charAt(0).toUpperCase()}
+            </span>
+          </div>
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-gray-900">
+              {!isBaseLoaded ? "加载中..." : base?.title || "未命名数据库"}
+            </h1>
+            <p className="text-xs text-gray-500">
+              {base?.sources?.length || 0} 个数据源 · {activeTables.length} 个表格
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-4 h-4 mr-1.5" />
+              新建表格
+            </Button>
+            <Button variant="outline" size="sm">
+              <Download className="w-4 h-4 mr-1.5" />
+              导入
+            </Button>
+          </div>
         </div>
 
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <StatCard
-              icon={<Database className="w-5 h-5 text-blue-500" />}
-              label="表格数量"
-              value={String(activeTables.length)}
-            />
-            <StatCard
-              icon={<Users className="w-5 h-5 text-green-500" />}
-              label="数据源"
-              value={String(base?.sources?.length || 0)}
-            />
-            <StatCard
-              icon={<Zap className="w-5 h-5 text-orange-500" />}
-              label="自动化"
-              value="0"
-            />
+        {/* Stats Row - Compact */}
+        {/* <div className="grid grid-cols-3 gap-3 mb-6">
+          <StatCard icon={<Grid3X3 className="w-4 h-4" />} label="表格" value={activeTables.length} color="blue" />
+          <StatCard icon={<Database className="w-4 h-4" />} label="数据源" value={base?.sources?.length || 0} color="green" />
+          <StatCard icon={<Users className="w-4 h-4" />} label="成员" value={1} color="purple" />
+        </div> */}
+
+        {/* Tables Section */}
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-medium text-gray-700">表格列表</h2>
           </div>
 
-          <div className="mt-8">
-            <h3 className="font-semibold text-gray-900 mb-4">表格列表</h3>
-            {isTablesLoading ? (
-              <div className="text-center py-12">
-                <Loader2 className="w-8 h-8 mx-auto mb-4 text-blue-500 animate-spin" />
-                <p className="text-gray-500">加载表格中...</p>
-              </div>
-            ) : activeTables.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <Database className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="mb-4">此 Base 中暂无表格</p>
-                <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  创建第一个表格
-                </Button>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
-                {activeTables.map((table) => (
-                  <button
-                    key={table.id}
-                    className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
-                    onClick={() => table.id && navigateToTable({ baseId, tableId: table.id })}
-                  >
-                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Table2 className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-gray-900 truncate">{table.title}</h4>
-                      <p className="text-sm text-gray-500">{table.table_name}</p>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          {isTablesLoading && activeTables.length === 0 ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="w-5 h-5 text-blue-500 animate-spin mr-2" />
+              <span className="text-sm text-gray-500">加载表格中...</span>
+            </div>
+          ) : activeTables.length === 0 ? (
+            <EmptyTableState onCreateTable={() => setIsCreateModalOpen(true)} />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {activeTables.map((table) => (
+                <TableCard
+                  key={table.id}
+                  title={table.title || "未命名"}
+                  tableName={table.table_name}
+                  onClick={() => table.id && navigateToTable({ baseId, tableId: table.id })}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -160,14 +133,16 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
               value={newTableName}
               onChange={(e) => setNewTableName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreateTable()}
+              autoFocus
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+            <Button variant="secondary" size="sm" onClick={() => setIsCreateModalOpen(false)}>
               取消
             </Button>
             <Button 
               variant="primary" 
+              size="sm"
               onClick={handleCreateTable}
               loading={isCreating}
               disabled={!newTableName.trim()}
@@ -181,38 +156,70 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
   );
 }
 
-function TabItem({ children, active = false }: { children: React.ReactNode; active?: boolean }) {
+function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number; color: string }) {
+  const colors = {
+    blue: 'bg-blue-50 text-blue-600',
+    green: 'bg-green-50 text-green-600',
+    purple: 'bg-purple-50 text-purple-600',
+    orange: 'bg-orange-50 text-orange-600',
+  };
+  const colorClass = colors[color as keyof typeof colors] || colors.blue;
+
+  return (
+    <div className="p-3 bg-white rounded-lg border border-gray-200">
+      <div className="flex items-center gap-2.5">
+        <div className={`w-8 h-8 rounded-md ${colorClass} flex items-center justify-center`}>
+          {icon}
+        </div>
+        <div>
+          <p className="text-lg font-semibold text-gray-900">{value}</p>
+          <p className="text-xs text-gray-500">{label}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TableCard({ title, tableName, onClick }: { title: string; tableName?: string; onClick: () => void }) {
+  const colors = ['bg-indigo-500', 'bg-violet-500', 'bg-fuchsia-500', 'bg-rose-500', 'bg-amber-500'];
+  const colorIndex = title.charCodeAt(0) % colors.length;
+  const bgColor = colors[colorIndex];
+
   return (
     <button
-      className={`py-3 px-1 text-sm font-medium border-b-2 transition-colors ${
-        active
-          ? "border-blue-500 text-blue-600"
-          : "border-transparent text-gray-500 hover:text-gray-700"
-      }`}
+      className="group p-3 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all text-left"
+      onClick={onClick}
     >
-      {children}
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-md ${bgColor} flex items-center justify-center flex-shrink-0`}>
+          <FileSpreadsheet className="w-4 h-4 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium text-gray-900 text-sm truncate pr-2">{title}</h3>
+            <ArrowRight className="w-3.5 h-3.5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+          </div>
+          {tableName && (
+            <p className="text-xs text-gray-400 truncate mt-0.5">{tableName}</p>
+          )}
+        </div>
+      </div>
     </button>
   );
 }
 
-function StatCard({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
+function EmptyTableState({ onCreateTable }: { onCreateTable: () => void }) {
   return (
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <div className="flex items-center gap-3">
-        {icon}
-        <div>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <p className="text-sm text-gray-500">{label}</p>
-        </div>
+    <div className="text-center py-12 px-6 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+        <Table2 className="w-6 h-6 text-gray-400" />
       </div>
+      <h3 className="text-sm font-medium text-gray-900 mb-1">暂无表格</h3>
+      <p className="text-sm text-gray-500 mb-4">创建您的第一个表格开始管理数据</p>
+      <Button variant="primary" size="sm" onClick={onCreateTable}>
+        <Plus className="w-4 h-4 mr-1.5" />
+        创建表格
+      </Button>
     </div>
   );
 }

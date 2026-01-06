@@ -278,13 +278,6 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
           <Plus className="w-4 h-4" />
           <span>新建数据库</span>
         </Link>
-        <Link
-          href="/workspace/settings"
-          className="w-full flex items-center gap-2 p-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 mt-1"
-        >
-          <Settings className="w-4 h-4" />
-          <span>设置</span>
-        </Link>
       </div>
     </div>
   );

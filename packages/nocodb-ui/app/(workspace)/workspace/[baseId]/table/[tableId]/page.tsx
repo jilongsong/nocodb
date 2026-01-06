@@ -94,7 +94,8 @@ export default function TablePage({
     addColumn,
     updateColumn,
     deleteColumn,
-  } = useTableData({ tableId, baseId, viewId: undefined, pageSize: 25 });
+    setViewId,
+  } = useTableData({ tableId, baseId, pageSize: 25 });
 
   // Get views for current table (must be before activeViewId state)
   const views = viewsByTable.get(tableId) || [];
@@ -211,6 +212,13 @@ export default function TablePage({
       }
     }
   }, [views, activeViewId]);
+
+  // Sync viewId with useTableData when view changes
+  useEffect(() => {
+    if (currentViewId) {
+      setViewId(currentViewId);
+    }
+  }, [currentViewId, setViewId]);
 
   // Handle creating a new view
   const handleCreateView = async (type: "grid" | "gallery" | "form" | "kanban" | "calendar") => {
@@ -526,6 +534,8 @@ export default function TablePage({
           }
           setInsertColumnPosition(null);
           await loadTableMeta();
+          // Reload view columns to get updated order information
+          await loadViewColumns();
         }}
         onDelete={editingColumn?.id ? async () => {
           if (confirm(`确定要删除字段 "${editingColumn.title}" 吗？`)) {

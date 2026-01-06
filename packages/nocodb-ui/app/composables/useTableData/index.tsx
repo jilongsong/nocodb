@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import type { ColumnType, TableType } from "nocodb-sdk";
 import { useApi } from "../useApi";
 import type {
@@ -49,7 +49,8 @@ export const rowDefaultData = (columns?: ColumnType[]): Record<string, any> => {
 };
 
 export function useTableData(options: UseTableDataOptions) {
-  const { tableId, viewId, baseId, pageSize: defaultPageSize = 25 } = options;
+  const { tableId, baseId, pageSize: defaultPageSize = 25 } = options;
+  const [currentViewId, setCurrentViewId] = useState<string | undefined>(options.viewId);
   const { api } = useApi({ useGlobalInstance: true });
 
   // State
@@ -85,7 +86,7 @@ export function useTableData(options: UseTableDataOptions) {
     }
   }, [api, tableId]);
 
-  // Load data
+  // Load data - uses dbViewRow.list when viewId is available to apply view filters/sorts
   const loadData = useCallback(
     async (params: LoadDataParams = {}, shouldShowLoading = true) => {
       if (!baseId || !tableId) return;
@@ -103,11 +104,23 @@ export function useTableData(options: UseTableDataOptions) {
         const offset = params.offset ?? (paginationData.page - 1) * paginationData.pageSize;
         const limit = params.limit ?? paginationData.pageSize;
 
-        const response = await api.dbTableRow.list("noco", baseId, tableId, {
-          offset,
-          limit,
-          where: params.where,
-        });
+        let response;
+        
+        // Use dbViewRow.list when viewId is available - this applies view filters and sorts
+        if (currentViewId) {
+          response = await api.dbViewRow.list("noco", baseId, tableId, currentViewId, {
+            offset,
+            limit,
+            where: params.where,
+          } as any);
+        } else {
+          // Fallback to table-level list without view filters/sorts
+          response = await api.dbTableRow.list("noco", baseId, tableId, {
+            offset,
+            limit,
+            where: params.where,
+          });
+        }
 
         const formattedRows = formatData(response.list || []);
         setRows(formattedRows);
@@ -129,7 +142,7 @@ export function useTableData(options: UseTableDataOptions) {
         setIsLoading(false);
       }
     },
-    [api, baseId, tableId, paginationData.page, paginationData.pageSize]
+    [api, baseId, tableId, currentViewId, paginationData.page, paginationData.pageSize]
   );
 
   // Reload data
@@ -403,13 +416,17 @@ export function useTableData(options: UseTableDataOptions) {
 
   // Add column
   const addColumn = useCallback(
-    async (columnData: Partial<ColumnType>, position?: number) => {
+    async (columnData: Partial<ColumnType> & { column_order?: { view_id: string; order: number } }) => {
       if (!tableId) return;
 
       try {
+        // Extract column_order from columnData if present
+        const { column_order, ...restColumnData } = columnData as any;
+        
         const newColumn = await api.dbTableColumn.create(tableId, {
-          ...columnData,
-          column_order: position ? { order: position } : undefined,
+          ...restColumnData,
+          ...(column_order ? { column_order } : {}),
+          ...(currentViewId ? { view_id: currentViewId } : {}),
         } as any);
 
         // Reload table meta to get updated columns
@@ -420,7 +437,7 @@ export function useTableData(options: UseTableDataOptions) {
         throw e;
       }
     },
-    [api, tableId, loadTableMeta]
+    [api, tableId, currentViewId, loadTableMeta]
   );
 
   // Update column
@@ -475,6 +492,19 @@ export function useTableData(options: UseTableDataOptions) {
   // Check if all rows are selected
   const allRowsSelected = rows.length > 0 && rows.every((r) => r.rowMeta.selected);
 
+  // Track previous viewId to detect changes
+  const prevViewIdRef = useRef<string | undefined>(currentViewId);
+  
+  // Reload data when viewId changes (to apply view filters/sorts)
+  useEffect(() => {
+    if (currentViewId && currentViewId !== prevViewIdRef.current) {
+      prevViewIdRef.current = currentViewId;
+      // Reset to page 1 and reload with new view's filters/sorts
+      setPaginationData((prev) => ({ ...prev, page: 1 }));
+      loadData({ offset: 0 });
+    }
+  }, [currentViewId, loadData]);
+
   return {
     // State
     rows,
@@ -514,6 +544,9 @@ export function useTableData(options: UseTableDataOptions) {
     updateColumn,
     deleteColumn,
     reorderColumn,
+    // View management
+    currentViewId,
+    setViewId: setCurrentViewId,
   };
 }
 

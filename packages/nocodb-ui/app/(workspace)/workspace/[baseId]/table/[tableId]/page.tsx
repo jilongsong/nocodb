@@ -24,7 +24,7 @@ import { useViewColumns } from "@/app/composables/useViewColumns";
 import { useViewSorts } from "@/app/composables/useViewSorts";
 import { useViewFilters } from "@/app/composables/useViewFilters";
 import { ViewOptionsMenu } from "@/components/workspace/menus/ViewOptionsMenu";
-import { VirtualGrid, Toolbar, ColumnEditor } from "@/app/components/smartsheet";
+import { VirtualGrid, Toolbar, ColumnEditor, Pagination } from "@/app/components/smartsheet";
 import type { SortType } from "nocodb-sdk";
 import type { ColumnType } from "nocodb-sdk";
 import { ViewTypes } from "nocodb-sdk";
@@ -82,6 +82,7 @@ export default function TablePage({
     loadData,
     reloadData,
     changePage,
+    changePageSize,
     addEmptyRow,
     insertRow,
     updateCell,
@@ -480,38 +481,16 @@ export default function TablePage({
       </div>
 
       {/* Pagination */}
-      {paginationData.totalRows !== undefined && paginationData.totalRows > 0 && (
-        <div className="bg-white border-t border-gray-200 px-4 py-2 flex items-center justify-between">
-          <div className="text-sm text-gray-500">
-            共 {paginationData.totalRows} 条记录
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => changePage(paginationData.page - 1)}
-              disabled={paginationData.page <= 1}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm text-gray-600">
-              第 {paginationData.page} / {Math.ceil((paginationData.totalRows || 0) / paginationData.pageSize)} 页
-            </span>
-            <button
-              onClick={() => changePage(paginationData.page + 1)}
-              disabled={paginationData.page >= Math.ceil((paginationData.totalRows || 0) / paginationData.pageSize)}
-              className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-            <button
-              onClick={reloadData}
-              className="p-1 hover:bg-gray-100 rounded ml-2"
-              title="刷新"
-            >
-              <RefreshCw className="w-4 h-4 text-gray-500" />
-            </button>
-          </div>
-        </div>
+      {paginationData.totalRows !== undefined && (
+        <Pagination
+          currentPage={paginationData.page}
+          pageSize={paginationData.pageSize}
+          totalRows={paginationData.totalRows}
+          isLoading={isLoading}
+          onPageChange={changePage}
+          onPageSizeChange={changePageSize}
+          onRefresh={reloadData}
+        />
       )}
 
       {/* Column Editor Dialog */}

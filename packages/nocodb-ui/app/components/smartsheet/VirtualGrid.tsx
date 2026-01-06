@@ -103,34 +103,38 @@ const GridRow = memo(function GridRow({
 
   return (
     <div
-      className={`flex border-b border-gray-100 hover:bg-gray-50 ${
-        isSelected ? "bg-blue-50" : ""
+      className={`flex border-b border-gray-100 transition-colors duration-150 ${
+        isSelected 
+          ? "bg-blue-50/70 hover:bg-blue-50" 
+          : "hover:bg-slate-50/80"
       } ${isSaving ? "opacity-50" : ""}`}
       style={{ height: ROW_HEIGHT }}
     >
       {/* Row Number / Checkbox */}
       <div
-        className="flex items-center justify-center border-r border-gray-100 bg-white sticky left-0 z-10 group"
+        className="flex items-center justify-center border-r border-gray-100 bg-gray-50/50 sticky left-0 z-10 group"
         style={{ width: ROW_NUMBER_WIDTH, minWidth: ROW_NUMBER_WIDTH }}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-center w-full">
           <input
             type="checkbox"
             checked={isSelected}
             onChange={(e) => onRowSelect?.(rowIndex, e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 opacity-0 group-hover:opacity-100 checked:opacity-100"
+            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 opacity-0 group-hover:opacity-100 checked:opacity-100 transition-opacity cursor-pointer"
           />
-          <span className="text-xs text-gray-400 group-hover:hidden">
+          <span className={`absolute text-xs font-medium text-gray-400 group-hover:opacity-0 transition-opacity ${
+            isSelected ? "opacity-0" : ""
+          }`}>
             {rowIndex + 1}
           </span>
         </div>
         {!readOnly && (
           <button
             onClick={() => onDeleteRow?.(rowIndex)}
-            className="absolute right-1 p-0.5 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded"
+            className="absolute right-1 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-md transition-all"
             title="删除行"
           >
-            <Trash2 className="w-3 h-3 text-red-500" />
+            <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
         )}
       </div>
@@ -144,8 +148,10 @@ const GridRow = memo(function GridRow({
         return (
           <div
             key={column.id}
-            className={`relative border-r border-gray-100 ${
-              isActive ? "ring-2 ring-blue-500 ring-inset z-10" : ""
+            className={`relative border-r border-gray-100 transition-shadow ${
+              isActive 
+                ? "ring-2 ring-blue-500 ring-inset z-10 bg-white" 
+                : ""
             }`}
             style={{ width, minWidth: width, height: ROW_HEIGHT }}
             onClick={() => onCellClick?.(rowIndex, colIndex)}
@@ -425,18 +431,24 @@ export function VirtualGrid({
     <div className="h-full flex flex-col">
       {/* Selection toolbar */}
       {selectedCount > 0 && (
-        <div className="bg-blue-50 border-b border-blue-200 px-4 py-2 flex items-center gap-4">
-          <span className="text-sm text-blue-700">已选择 {selectedCount} 行</span>
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-200 px-4 py-2.5 flex items-center gap-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center">
+              <span className="text-xs font-bold text-white">{selectedCount}</span>
+            </div>
+            <span className="text-sm font-medium text-blue-700">行已选择</span>
+          </div>
+          <div className="h-4 w-px bg-blue-200" />
           <button
             onClick={onDeleteSelectedRows}
-            className="flex items-center gap-1 px-2 py-1 text-sm text-red-600 hover:bg-red-100 rounded"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-100 rounded-md transition-colors"
           >
             <Trash2 className="w-4 h-4" />
-            删除选中行
+            删除选中
           </button>
           <button
             onClick={() => onSelectAllRows?.(false)}
-            className="text-sm text-blue-600 hover:underline"
+            className="text-sm text-blue-600 hover:text-blue-800 hover:underline font-medium transition-colors"
           >
             取消选择
           </button>
@@ -446,14 +458,14 @@ export function VirtualGrid({
       {/* Grid container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-auto bg-white"
+        className="flex-1 overflow-auto bg-white scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent"
         onScroll={handleScroll}
         style={{ cursor: resizingColumn ? "col-resize" : undefined }}
       >
         <div style={{ minWidth: totalWidth }}>
           {/* Header Row */}
           <div
-            className="flex sticky top-0 z-20 bg-gray-50 border-b border-gray-200"
+            className="flex sticky top-0 z-10 bg-gradient-to-b from-gray-50 to-gray-100 border-b border-gray-200"
             style={{ height: HEADER_HEIGHT }}
           >
             {/* Checkbox / Row Number Header */}
@@ -465,7 +477,7 @@ export function VirtualGrid({
                 type="checkbox"
                 checked={allRowsSelected}
                 onChange={(e) => onSelectAllRows?.(e.target.checked)}
-                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 focus:ring-offset-0 cursor-pointer"
               />
             </div>
 
@@ -508,11 +520,12 @@ export function VirtualGrid({
             {/* Add Column Button */}
             {!readOnly && (
               <div
-                className="flex items-center justify-center cursor-pointer hover:bg-gray-100 border-r border-gray-200"
+                className="flex items-center justify-center cursor-pointer hover:bg-blue-50 border-r border-gray-200 transition-colors group"
                 style={{ width: 50 }}
                 onClick={onAddColumn}
+                title="添加字段"
               >
-                <Plus className="w-4 h-4 text-gray-400" />
+                <Plus className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
               </div>
             )}
           </div>
@@ -561,27 +574,27 @@ export function VirtualGrid({
           {/* Add Row Button */}
           {!readOnly && (
             <div
-              className="flex items-center border-b border-gray-100 hover:bg-gray-50 cursor-pointer sticky left-0"
+              className="flex items-center border-b border-gray-100 hover:bg-blue-50/50 cursor-pointer sticky left-0 transition-colors group"
               style={{ height: ROW_HEIGHT }}
               onClick={onAddRow}
             >
               <div
-                className="flex items-center justify-center border-r border-gray-100"
+                className="flex items-center justify-center border-r border-gray-100 bg-gray-50/30"
                 style={{ width: ROW_NUMBER_WIDTH }}
               >
-                <Plus className="w-4 h-4 text-gray-300" />
+                <Plus className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition-colors" />
               </div>
-              <div className="flex-1 px-3 text-sm text-gray-400">
-                点击添加新行
+              <div className="flex-1 px-3 text-sm text-gray-400 group-hover:text-blue-600 transition-colors">
+                + 点击添加新行
               </div>
             </div>
           )}
 
           {/* Loading more indicator */}
           {isLoading && rows.length > 0 && (
-            <div className="flex items-center justify-center py-4">
+            <div className="flex items-center justify-center py-6 bg-gradient-to-t from-blue-50/50 to-transparent">
               <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
-              <span className="ml-2 text-sm text-gray-500">加载更多...</span>
+              <span className="ml-2 text-sm font-medium text-gray-500">加载数据中...</span>
             </div>
           )}
         </div>

@@ -5,5 +5,6 @@ export { ColumnHeader, getColumnIcon, getColumnTypeLabel } from "./header/Column
 export { ColumnHeaderMenu } from "./header/ColumnHeaderMenu";
 export { ColumnEditor } from "./column/ColumnEditor";
 export { Toolbar } from "./toolbar/Toolbar";
+export { Pagination } from "./Pagination";
 export { SingleSelectCell, MultiSelectCell } from "./cells/SelectCell";
 export { CellContextMenu } from "./context/CellContextMenu";

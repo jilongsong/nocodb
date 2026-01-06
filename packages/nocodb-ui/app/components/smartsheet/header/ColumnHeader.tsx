@@ -198,22 +198,22 @@ export function ColumnHeader({
 
   return (
     <div
-      className={`relative flex items-center h-full group select-none ${
-        isResizing ? "bg-blue-50" : "hover:bg-gray-100"
+      className={`relative flex items-center h-full group select-none transition-colors ${
+        isResizing ? "bg-blue-50" : "hover:bg-white/80"
       }`}
       style={{ width, minWidth: width }}
     >
       {/* Drag Handle */}
       {!readOnly && !isSystemColumn && (
-        <div className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab">
+        <div className="absolute left-0 top-0 bottom-0 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab transition-opacity">
           <GripVertical className="w-3 h-3 text-gray-400" />
         </div>
       )}
 
       {/* Column Content */}
-      <div className="flex-1 flex items-center gap-1.5 px-3 min-w-0 h-full">
+      <div className="flex-1 flex items-center gap-2 px-3 min-w-0 h-full">
         <Icon className="w-4 h-4 text-gray-500 shrink-0" />
-        <span className="text-sm font-medium text-gray-700 truncate flex-1">
+        <span className="text-sm font-semibold text-gray-700 truncate flex-1">
           {column.title}
         </span>
         {/* {isPrimaryKey && (
@@ -233,12 +233,12 @@ export function ColumnHeader({
         <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button
-              className={`p-1 mr-1 rounded opacity-0 group-hover:opacity-100 hover:bg-gray-200 ${
+              className={`p-1.5 mr-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-gray-200/80 transition-all ${
                 isMenuOpen ? "opacity-100 bg-gray-200" : ""
               }`}
               onClick={(e) => e.stopPropagation()}
             >
-              <ChevronDown className="w-3.5 h-3.5 text-gray-500" />
+              <ChevronDown className="w-3.5 h-3.5 text-gray-600" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48">

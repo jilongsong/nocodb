@@ -1,6 +1,6 @@
 import type { Api } from 'nocodb-sdk'
 import type { AxiosError } from 'axios'
-import { getStoredToken, setStoredToken } from './store'
+import { getStoredToken, setStoredToken, clearStoredToken } from './store'
 
 const DbNotFoundMsg = 'Database config not found'
 const TIMEOUT_RETRY_COUNT = 1
@@ -97,43 +97,47 @@ export function addAxiosInterceptors(
 
       // Token 刷新请求失败，直接登出
       if (error.config?.url === '/auth/token/refresh') {
-        setStoredToken(null)
-        navigate('/signin')
+        clearStoredToken()
+        console.error('Authentication required - Token refresh failed')
         return Promise.reject(error)
       }
 
-      // 尝试刷新 token
-      let retry = 0
-      do {
-        try {
-          const refreshResponse = await axiosInstance.post('/auth/token/refresh')
-          const newToken = refreshResponse.data?.token
+      // 检查是否有 token，如果没有则不尝试刷新
+      const currentToken = getStoredToken()
+      if (!currentToken) {
+        console.error('Authentication required - No token available')
+        return Promise.reject(error)
+      }
 
-          if (!newToken) {
-            setStoredToken(null)
-            navigate('/signin')
-            return Promise.reject(error)
-          }
+      // 尝试刷新 token（只尝试一次）
+      try {
+        const refreshResponse = await axiosInstance.post('/auth/token/refresh', null, {
+          withCredentials: true,
+        })
+        const newToken = refreshResponse.data?.token
 
-          // 更新 token 并重试原请求
-          setStoredToken(newToken)
-          if (error.config) {
-            error.config.headers['xc-auth'] = newToken
-            const response = await axiosInstance.request(error.config)
-            return response
-          }
-        } catch (refreshTokenError) {
-          if ((refreshTokenError as AxiosError)?.code === 'ERR_CANCELED') {
-            return Promise.reject(refreshTokenError)
-          }
-
-          if (retry >= TIMEOUT_RETRY_COUNT) {
-            setStoredToken(null)
-            navigate('/signin')
-            return Promise.reject(error)
-          }
+        if (!newToken) {
+          clearStoredToken()
+          console.error('Authentication required - Invalid token')
+          return Promise.reject(error)
         }
-      } while (retry++ < TIMEOUT_RETRY_COUNT)
+
+        // 更新 token 并重试原请求
+        setStoredToken(newToken)
+        if (error.config) {
+          error.config.headers['xc-auth'] = newToken
+          const response = await axiosInstance.request(error.config)
+          return response
+        }
+      } catch (refreshTokenError) {
+        if ((refreshTokenError as AxiosError)?.code === 'ERR_CANCELED') {
+          return Promise.reject(refreshTokenError)
+        }
+        
+        // Token 刷新失败，清除 token
+        clearStoredToken()
+        console.error('Authentication required - Token refresh failed')
+      }
 
       return Promise.reject(error)
     },

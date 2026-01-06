@@ -106,6 +106,8 @@ export interface GlobalState extends StoredState {
   runningRequests: number
   error: Error | null
   appInfo: AppInfo
+  /** 标识全局状态是否已完成初始化（从 localStorage 加载完成） */
+  isInitialized: boolean
 }
 
 /**

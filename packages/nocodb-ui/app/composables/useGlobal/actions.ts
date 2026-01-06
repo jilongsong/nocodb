@@ -2,6 +2,7 @@ import type { Api } from 'nocodb-sdk'
 import type { AxiosInstance } from 'axios'
 import type { AppInfo, SignOutParams, User, GlobalState } from './types'
 import { updateStoredState } from './state'
+import { setStoredToken } from '../useApi/store'
 
 /**
  * 将标题转换为可读的 URL slug
@@ -43,8 +44,11 @@ export function createActions(deps: ActionDependencies) {
     } catch {
       // ignore error
     } finally {
-      setState({ token: null, user: null })
+      setState({ token: null, user: null, jwtPayload: null })
       updateStoredState({ token: null })
+      
+      // 同步清除所有 token 存储位置（localStorage + cookie）
+      setStoredToken(null)
 
       if (redirectToSignin) {
         navigate(signinUrl)
@@ -80,6 +84,9 @@ export function createActions(deps: ActionDependencies) {
 
     setState({ token: newToken, user, jwtPayload })
     updateStoredState({ token: newToken })
+    
+    // 同步到所有 token 存储位置（localStorage + cookie）
+    setStoredToken(newToken)
   }
 
   const refreshToken = async (params?: {

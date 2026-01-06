@@ -22,7 +22,7 @@
   "web-types": "web-types.json",
   "scripts": {
     "build": "nuxt build",
-    "dev": "nuxt dev",
+    "dev": "nuxt dev --port:3002",
     "generate": "nuxt generate",
     "start": "node .output/server/index.mjs",
     "lint": "eslint --ext \".js,.jsx,.ts,.tsx,.vue\" --fix --ignore-path .gitignore .",

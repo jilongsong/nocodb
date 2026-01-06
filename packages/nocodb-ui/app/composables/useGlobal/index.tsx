@@ -10,17 +10,34 @@ import { getGlobalApi } from '../useApi'
 
 /**
  * 获取初始全局状态
+ * 注意：初始状态不解析 token，等待 useEffect 在客户端完成
  */
 function getInitialGlobalState(): GlobalState {
-  const storedState = loadStoredState()
   return {
-    ...storedState,
+    token: null,
+    lang: 'en',
+    darkMode: false,
+    filterAutoSave: true,
+    includeM2M: false,
+    showNull: false,
+    currentVersion: null,
+    latestRelease: null,
+    hiddenRelease: null,
+    isMobileMode: null,
+    lastOpenedWorkspaceId: null,
+    gridViewPageSize: 25,
+    leftSidebarSize: { old: 0, current: 0 },
+    isAddNewRecordGridMode: true,
+    syncDataUpvotes: [],
+    giftBannerDismissedCount: 0,
+    isLeftSidebarOpen: true,
     user: null,
     jwtPayload: null,
     timestamp: Date.now(),
     runningRequests: 0,
     error: null,
     appInfo: getInitialAppInfo(),
+    isInitialized: false,
   }
 }
 
@@ -70,44 +87,46 @@ export function GlobalProvider({ children }: { children: React.ReactNode }) {
   // 计算 getters
   const getters = useMemo(() => getGetters(state), [state])
 
-  // 初始化时从 localStorage 加载状态
+  // 初始化时从 localStorage 加载状态（仅在客户端执行一次）
   useEffect(() => {
     const storedState = loadStoredState()
-    setState(storedState)
     
-    // 如果有 token，解析 JWT payload
+    // 如果有 token，同步解析 JWT payload
+    let jwtPayload = null
+    let user = null
     if (storedState.token) {
       try {
         const base64Url = storedState.token.split('.')[1]
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
-        const jwtPayload = JSON.parse(window.atob(base64))
-        setState({ 
-          jwtPayload,
-          user: {
-            id: jwtPayload.id,
-            email: jwtPayload.email,
-            firstname: jwtPayload.firstname,
-            lastname: jwtPayload.lastname,
-            roles: jwtPayload.roles,
-            display_name: jwtPayload.display_name,
-          }
-        })
+        jwtPayload = JSON.parse(window.atob(base64))
+        user = {
+          id: jwtPayload.id,
+          email: jwtPayload.email,
+          firstname: jwtPayload.firstname,
+          lastname: jwtPayload.lastname,
+          roles: jwtPayload.roles,
+          display_name: jwtPayload.display_name,
+        }
       } catch {
         console.error('Failed to parse stored JWT token')
       }
     }
 
+    // 一次性设置所有状态，包括 isInitialized
+    setState({
+      ...storedState,
+      jwtPayload,
+      user,
+      isInitialized: true,
+    })
+
     // 加载 appInfo
     actions.loadAppInfo()
-  }, [setState, actions])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // 定时更新 timestamp
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setState({ timestamp: Date.now() })
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [setState])
+  // 注意：移除了 timestamp 定时更新，因为它会导致不必要的重新渲染
+  // 如果需要 timestamp，可以在需要时手动获取 Date.now()
 
   // 组合最终的返回值
   const value = useMemo<UseGlobalReturn>(() => ({

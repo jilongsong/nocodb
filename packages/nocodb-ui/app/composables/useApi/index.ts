@@ -157,7 +157,6 @@ export function useApi<Data = any, RequestConfig = any>({
       api.instance.interceptors.response.eject(responseInterceptor)
     }
   }, [api, axiosConfig, handleRequestStart, handleRequestFinish, reset])
- console.log(api)
   return {
     api,
     isLoading,

@@ -1,17 +1,56 @@
 "use client";
 
-import { use } from "react";
-import { Plus, Download, Database, Settings, Users, Zap } from "lucide-react";
-import { Button } from "@/app/components/ui";
+import { use, useEffect, useState } from "react";
+import { Plus, Download, Database, Users, Zap, Loader2, Table2, ChevronRight } from "lucide-react";
+import { Button, Modal, Input } from "@/app/components/ui";
+import { useBases } from "@/app/composables/useBases";
+import { useTables } from "@/app/composables/useTables";
 
 export default function BasePage({ params }: { params: Promise<{ baseId: string }> }) {
   const { baseId } = use(params);
+  const { loadProject, openedProject, isProjectsLoading } = useBases();
+  const { loadProjectTables, activeTables, isTablesLoading, createTable, navigateToTable } = useTables();
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newTableName, setNewTableName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  // 加载 Base 详情和 Tables
+  useEffect(() => {
+    if (baseId) {
+      loadProject(baseId);
+      loadProjectTables(baseId);
+    }
+  }, [baseId, loadProject, loadProjectTables]);
+
+  const base = openedProject;
+  const isLoading = isProjectsLoading || !base;
+  const defaultSourceId = base?.sources?.[0]?.id;
+
+  // 创建表格
+  const handleCreateTable = async () => {
+    if (!newTableName.trim() || !defaultSourceId) return;
+    
+    setIsCreating(true);
+    try {
+      const result = await createTable(baseId, defaultSourceId, newTableName.trim());
+      if (result?.id) {
+        setIsCreateModalOpen(false);
+        setNewTableName("");
+        navigateToTable({ baseId, tableId: result.id });
+      }
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <div className="p-6">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Base: {baseId}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isLoading ? "Loading..." : base?.title || "Untitled Base"}
+        </h1>
         <p className="text-gray-500 mt-1">管理您的数据库和表格</p>
       </div>
 
@@ -19,7 +58,7 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
       <section className="mb-8">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">快速操作</h2>
         <div className="flex flex-wrap gap-3">
-          <Button variant="primary">
+          <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             新建表格
           </Button>
@@ -50,12 +89,12 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
             <StatCard
               icon={<Database className="w-5 h-5 text-blue-500" />}
               label="表格数量"
-              value="0"
+              value={String(activeTables.length)}
             />
             <StatCard
               icon={<Users className="w-5 h-5 text-green-500" />}
-              label="成员数量"
-              value="1"
+              label="数据源"
+              value={String(base?.sources?.length || 0)}
             />
             <StatCard
               icon={<Zap className="w-5 h-5 text-orange-500" />}
@@ -66,17 +105,78 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
 
           <div className="mt-8">
             <h3 className="font-semibold text-gray-900 mb-4">表格列表</h3>
-            <div className="text-center py-12 text-gray-500">
-              <Database className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <p className="mb-4">此 Base 中暂无表格</p>
-              <Button variant="primary">
-                <Plus className="w-4 h-4 mr-2" />
-                创建第一个表格
-              </Button>
-            </div>
+            {isTablesLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="w-8 h-8 mx-auto mb-4 text-blue-500 animate-spin" />
+                <p className="text-gray-500">加载表格中...</p>
+              </div>
+            ) : activeTables.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Database className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="mb-4">此 Base 中暂无表格</p>
+                <Button variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  创建第一个表格
+                </Button>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100 border border-gray-200 rounded-lg">
+                {activeTables.map((table) => (
+                  <button
+                    key={table.id}
+                    className="w-full p-4 flex items-center gap-4 hover:bg-gray-50 transition-colors text-left"
+                    onClick={() => table.id && navigateToTable({ baseId, tableId: table.id })}
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Table2 className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-medium text-gray-900 truncate">{table.title}</h4>
+                      <p className="text-sm text-gray-500">{table.table_name}</p>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Create Table Modal */}
+      <Modal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="创建新表格"
+        size="sm"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              表格名称
+            </label>
+            <Input
+              placeholder="输入表格名称"
+              value={newTableName}
+              onChange={(e) => setNewTableName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateTable()}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="secondary" onClick={() => setIsCreateModalOpen(false)}>
+              取消
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={handleCreateTable}
+              loading={isCreating}
+              disabled={!newTableName.trim()}
+            >
+              创建
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1,15 +1,17 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { Plus, Download, Database, Users, Loader2, Table2, ArrowRight, Clock, Grid3X3, FileSpreadsheet } from "lucide-react";
+import { Plus, Download, Database, Users, Loader2, Table2, ArrowRight, Clock, Grid3X3, FileSpreadsheet, Zap } from "lucide-react";
 import { Button, Modal, Input } from "@/app/components/ui";
 import { useBases } from "@/app/composables/useBases";
 import { useTables } from "@/app/composables/useTables";
+import { useRouter } from "next/navigation";
 
 export default function BasePage({ params }: { params: Promise<{ baseId: string }> }) {
   const { baseId } = use(params);
   const { loadProject, openedProject } = useBases();
   const { loadProjectTables, activeTables, isTablesLoading, createTable, navigateToTable } = useTables();
+  const router = useRouter();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newTableName, setNewTableName] = useState("");
@@ -77,6 +79,14 @@ export default function BasePage({ params }: { params: Promise<{ baseId: string 
             <Button variant="outline" size="sm">
               <Download className="w-4 h-4 mr-1.5" />
               导入
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => router.push(`/workspace/${baseId}/automations`)}
+            >
+              <Zap className="w-4 h-4 mr-1.5" />
+              自动化
             </Button>
           </div>
         </div>

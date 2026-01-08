@@ -56,3 +56,6 @@ export { default as DataReflection } from './DataReflection';
 export { default as MCPToken } from './MCPToken';
 export { default as Dashboard } from './Dashboard';
 export { default as Permission } from './Permission';
+export { default as Automation } from './Automation';
+export { default as AutomationAction } from './AutomationAction';
+export { default as AutomationLog } from './AutomationLog';

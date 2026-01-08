@@ -73,6 +73,10 @@ export enum MetaTable {
   PERMISSION_SUBJECTS = 'nc_permission_subjects',
   DASHBOARDS = 'nc_dashboards_v2',
   WIDGETS = 'nc_widgets_v2',
+  AUTOMATIONS = 'nc_automations',
+  AUTOMATION_ACTIONS = 'nc_automation_actions',
+  AUTOMATION_LOGS = 'nc_automation_logs',
+  AUTOMATION_ACTION_LOGS = 'nc_automation_action_logs',
 }
 
 export enum MetaTableOldV2 {
@@ -227,6 +231,8 @@ export enum CacheScope {
   PERMISSION_USER = 'permissionUser',
   DASHBOARD = 'dashboard',
   WIDGET = 'widget',
+  AUTOMATION = 'automation',
+  AUTOMATION_LOG = 'automationLog',
 }
 
 export enum CacheGetType {

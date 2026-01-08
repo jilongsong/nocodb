@@ -162,4 +162,9 @@ export class JobsService implements OnModuleInit {
   async pauseQueue() {
     await this.fallbackQueueService.queue.pause();
   }
+
+  async removeRepeatableJob(jobId: string, _cron?: string) {
+    // Fallback 模式下，从内存中移除重复任务
+    this.fallbackQueueService.removeJob(jobId);
+  }
 }

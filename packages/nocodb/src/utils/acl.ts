@@ -181,6 +181,13 @@ const permissionScopes = {
     'mcpCreate',
     'mcpUpdate',
     'mcpDelete',
+
+    // Automations
+    'automationList',
+    'automationGet',
+    'automationCreate',
+    'automationUpdate',
+    'automationDelete',
   ],
 };
 
@@ -260,6 +267,10 @@ const rolePermissions:
       mcpCreate: true,
       mcpUpdate: true,
       mcpDelete: true,
+
+      // Automations (read-only for viewer)
+      automationList: true,
+      automationGet: true,
     },
   },
   [ProjectRoles.COMMENTER]: {
@@ -316,6 +327,11 @@ const rolePermissions:
 
       // Extensions
       extensionUpdate: true,
+
+      // Automations (full access for editor)
+      automationCreate: true,
+      automationUpdate: true,
+      automationDelete: true,
     },
   },
   [ProjectRoles.CREATOR]: {

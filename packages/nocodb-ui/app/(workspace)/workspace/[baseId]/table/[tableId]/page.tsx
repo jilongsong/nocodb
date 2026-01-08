@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Maximize2,
   Minimize2,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/app/components/ui";
@@ -28,6 +29,7 @@ import { useViewFilters } from "@/app/composables/useViewFilters";
 import { ViewOptionsMenu } from "@/components/workspace/menus/ViewOptionsMenu";
 import { VirtualGrid, ColumnEditor, Pagination, FormView } from "@/app/components/smartsheet";
 import { GridToolbar, FormToolbar } from "@/app/components/smartsheet/toolbar";
+import { AutomationButton } from "@/app/components/automation";
 import type { SortType } from "nocodb-sdk";
 import type { ColumnType } from "nocodb-sdk";
 import { ViewTypes } from "nocodb-sdk";
@@ -372,6 +374,13 @@ export default function TablePage({
               </>
             )}
           </nav>
+          
+          {/* Automation Button */}
+          <AutomationButton 
+            baseId={baseId} 
+            tableId={tableId} 
+            variant="compact"
+          />
           
           {/* Fullscreen Toggle */}
           <button

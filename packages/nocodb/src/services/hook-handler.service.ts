@@ -18,6 +18,7 @@ import { Base, FormView, Hook, Model, Source, View } from '~/models';
 import { IEventEmitter } from '~/modules/event-emitter/event-emitter.interface';
 import { IJobsService } from '~/modules/jobs/jobs-service.interface';
 import { MailService } from '~/services/mail/mail.service';
+import { AutomationTriggerService } from '~/services/automation-trigger.service';
 
 export const HANDLE_WEBHOOK = '__nc_handleHooks';
 
@@ -30,6 +31,7 @@ export class HookHandlerService implements OnModuleInit, OnModuleDestroy {
     @Inject('IEventEmitter') protected readonly eventEmitter: IEventEmitter,
     @Inject('JobsService') protected readonly jobsService: IJobsService,
     protected readonly mailService: MailService,
+    protected readonly automationTriggerService: AutomationTriggerService,
   ) {}
 
   public async handleViewHooks(
@@ -175,6 +177,49 @@ export class HookHandlerService implements OnModuleInit, OnModuleDestroy {
           });
         }
       }
+    }
+
+    // 触发自动化 - 根据事件类型调用相应方法
+    try {
+      const recordId = newData?.Id || newData?.id || prevData?.Id || prevData?.id;
+      const changedFields = prevData && newData
+        ? Object.keys(newData).filter((key) => newData[key] !== prevData[key])
+        : undefined;
+
+      if (hookName === 'after.insert' || hookName === 'after.bulkInsert') {
+        await this.automationTriggerService.onRecordCreated(
+          context,
+          modelId,
+          recordId,
+          newData,
+          user?.id,
+        );
+      } else if (hookName === 'after.update' || hookName === 'after.bulkUpdate') {
+        await this.automationTriggerService.onRecordUpdated(
+          context,
+          modelId,
+          recordId,
+          newData,
+          prevData,
+          changedFields,
+          user?.id,
+        );
+      } else if (hookName === 'after.delete' || hookName === 'after.bulkDelete') {
+        await this.automationTriggerService.onRecordDeleted(
+          context,
+          modelId,
+          recordId,
+          prevData || newData,
+          user?.id,
+        );
+      }
+    } catch (e) {
+      this.logger.error({
+        error: e,
+        details: 'Error while triggering automation',
+        hookName,
+        modelId,
+      });
     }
   }
 

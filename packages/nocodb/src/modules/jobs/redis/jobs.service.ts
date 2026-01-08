@@ -202,6 +202,24 @@ export class JobsService implements OnModuleInit {
     await this.jobsQueue.pause();
   }
 
+  async removeRepeatableJob(jobId: string, cron?: string) {
+    try {
+      // 获取所有重复任务
+      const repeatableJobs = await this.jobsQueue.getRepeatableJobs();
+      
+      // 找到匹配的任务并移除
+      for (const job of repeatableJobs) {
+        if (job.id === jobId || (cron && job.cron === cron)) {
+          await this.jobsQueue.removeRepeatableByKey(job.key);
+          this.logger.log(`Removed repeatable job: ${jobId}`);
+          return;
+        }
+      }
+    } catch (e) {
+      this.logger.error(`Failed to remove repeatable job ${jobId}:`, e);
+    }
+  }
+
   async emitWorkerCommand(command: InstanceCommands, ...args: any[]) {
     return JobsRedis.emitWorkerCommand(command, ...args);
   }

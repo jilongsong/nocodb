@@ -48,6 +48,7 @@ import { GalleriesController } from '~/controllers/galleries.controller';
 import { GridColumnsController } from '~/controllers/grid-columns.controller';
 import { GridsController } from '~/controllers/grids.controller';
 import { HooksController } from '~/controllers/hooks.controller';
+import { AutomationsController } from '~/controllers/v3/automations.controller';
 import { JobsMetaController } from '~/controllers/jobs-meta.controller';
 import { KanbansController } from '~/controllers/kanbans.controller';
 import { MapsController } from '~/controllers/maps.controller';
@@ -87,6 +88,10 @@ import { GalleriesService } from '~/services/galleries.service';
 import { GridColumnsService } from '~/services/grid-columns.service';
 import { GridsService } from '~/services/grids.service';
 import { HooksService } from '~/services/hooks.service';
+import { AutomationsService } from '~/services/automations.service';
+import { AutomationExecutorService } from '~/services/automation-executor.service';
+import { AutomationTriggerService } from '~/services/automation-trigger.service';
+import { AutomationSchedulerService } from '~/services/automation-scheduler.service';
 import { JobsMetaService } from '~/services/jobs-meta.service';
 import { KanbansService } from '~/services/kanbans.service';
 import { MapsService } from '~/services/maps.service';
@@ -231,6 +236,7 @@ export const nocoModuleMetadata = {
           ColumnsV3Controller,
           SortsV3Controller,
           FiltersV3Controller,
+          AutomationsController,
 
           /* Datas */
           DataTableController,
@@ -279,6 +285,10 @@ export const nocoModuleMetadata = {
     GridColumnsService,
     GridsService,
     HooksService,
+    AutomationsService,
+    AutomationExecutorService,
+    AutomationTriggerService,
+    AutomationSchedulerService,
     KanbansService,
     MapsService,
     MetaDiffsService,
@@ -375,6 +385,10 @@ export const nocoModuleMetadata = {
     AttachmentsService,
     BaseUsersService,
     HooksService,
+    AutomationsService,
+    AutomationExecutorService,
+    AutomationTriggerService,
+    AutomationSchedulerService,
     MetaDiffsService,
     SourcesService,
     UtilsService,

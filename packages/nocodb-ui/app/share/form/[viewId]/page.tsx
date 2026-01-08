@@ -392,7 +392,7 @@ export default function SharedFormPage() {
           <p className="text-muted-foreground text-sm mb-6">
             {state.formData?.success_msg || "感谢您的填写"}
           </p>
-          {state.formData?.submit_another_form && (
+          {/* {state.formData?.submit_another_form && (
             <Button onClick={handleReset} variant="outline" size="sm">
               再填一份
             </Button>
@@ -401,7 +401,7 @@ export default function SharedFormPage() {
             <p className="mt-4 text-xs text-muted-foreground">
               {secondsRemain}秒后自动刷新...
             </p>
-          )}
+          )} */}
         </div>
       </div>
     );

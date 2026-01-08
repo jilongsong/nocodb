@@ -36,6 +36,8 @@ export enum JobTypes {
   UpdateSrcStat = 'update-source-stat',
   HealthCheck = 'health-check',
   HandleWebhook = 'handle-webhook',
+  HandleAutomation = 'handle-automation',
+  ScheduledAutomation = 'scheduled-automation',
   CleanUp = 'clean-up',
   DataExport = 'data-export',
   DataExportCleanUp = 'data-export-clean-up',
@@ -61,6 +63,8 @@ export const SKIP_STORING_JOB_META = [
   JobTypes.ThumbnailGenerator,
   JobTypes.UseWorker,
   JobTypes.HandleWebhook,
+  JobTypes.HandleAutomation,
+  JobTypes.ScheduledAutomation,
   JobTypes.InitMigrationJobs,
   JobTypes.UpdateModelStat,
   JobTypes.UpdateWsStat,
@@ -248,4 +252,16 @@ export interface ExecuteActionJobData extends JobData {
   modelId?: string;
   viewId?: string;
   scriptId: string;
+}
+
+export interface HandleAutomationJobData extends JobData {
+  automationId: string;
+  triggerData: Record<string, any>;
+  testMode?: boolean;
+}
+
+export interface ScheduledAutomationJobData extends JobData {
+  automationId: string;
+  cronExpression: string;
+  timezone?: string;
 }

@@ -5,6 +5,8 @@ import { MetaSyncProcessor } from '~/modules/jobs/jobs/meta-sync/meta-sync.proce
 import { SourceCreateProcessor } from '~/modules/jobs/jobs/source-create/source-create.processor';
 import { SourceDeleteProcessor } from '~/modules/jobs/jobs/source-delete/source-delete.processor';
 import { WebhookHandlerProcessor } from '~/modules/jobs/jobs/webhook-handler/webhook-handler.processor';
+import { AutomationHandlerProcessor } from '~/modules/jobs/jobs/automation-handler/automation-handler.processor';
+import { ScheduledAutomationProcessor } from '~/modules/jobs/jobs/scheduled-automation/scheduled-automation.processor';
 import { DataExportProcessor } from '~/modules/jobs/jobs/data-export/data-export.processor';
 import { ThumbnailGeneratorProcessor } from '~/modules/jobs/jobs/thumbnail-generator/thumbnail-generator.processor';
 import { AttachmentCleanUpProcessor } from '~/modules/jobs/jobs/attachment-clean-up/attachment-clean-up';
@@ -23,6 +25,8 @@ export class JobsMap {
     protected readonly sourceCreateProcessor: SourceCreateProcessor,
     protected readonly sourceDeleteProcessor: SourceDeleteProcessor,
     protected readonly webhookHandlerProcessor: WebhookHandlerProcessor,
+    protected readonly automationHandlerProcessor: AutomationHandlerProcessor,
+    protected readonly scheduledAutomationProcessor: ScheduledAutomationProcessor,
     protected readonly dataExportProcessor: DataExportProcessor,
     protected readonly thumbnailGeneratorProcessor: ThumbnailGeneratorProcessor,
     protected readonly attachmentCleanUpProcessor: AttachmentCleanUpProcessor,
@@ -65,6 +69,12 @@ export class JobsMap {
       },
       [JobTypes.HandleWebhook]: {
         this: this.webhookHandlerProcessor,
+      },
+      [JobTypes.HandleAutomation]: {
+        this: this.automationHandlerProcessor,
+      },
+      [JobTypes.ScheduledAutomation]: {
+        this: this.scheduledAutomationProcessor,
       },
       [JobTypes.DataExport]: {
         this: this.dataExportProcessor,

@@ -11,4 +11,5 @@ export interface IJobsService {
   resumeQueue(): Promise<void>;
   pauseQueue(): Promise<void>;
   setJobResult(jobId: string, data: any): Promise<void>;
+  removeRepeatableJob?(jobId: string, cron?: string): Promise<void>;
 }

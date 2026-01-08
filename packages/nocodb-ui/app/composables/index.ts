@@ -141,3 +141,20 @@ export type {
   UseFormViewOptions,
   UseFormViewReturn,
 } from "./useFormView";
+
+// useAutomation
+export { useAutomation, AutomationProvider } from "./useAutomation";
+export type {
+  Automation,
+  AutomationTrigger,
+  AutomationAction,
+  AutomationLog,
+  TriggerType,
+  ActionType,
+  TriggerConfig as AutomationTriggerConfig,
+  ActionConfig as AutomationActionConfig,
+  FilterGroup as AutomationFilterGroup,
+  UseAutomationReturn,
+  CreateAutomationRequest,
+  UpdateAutomationRequest,
+} from "./useAutomation/types";

@@ -21,6 +21,8 @@ import { SourceCreateProcessor } from '~/modules/jobs/jobs/source-create/source-
 import { SourceDeleteController } from '~/modules/jobs/jobs/source-delete/source-delete.controller';
 import { SourceDeleteProcessor } from '~/modules/jobs/jobs/source-delete/source-delete.processor';
 import { WebhookHandlerProcessor } from '~/modules/jobs/jobs/webhook-handler/webhook-handler.processor';
+import { AutomationHandlerProcessor } from '~/modules/jobs/jobs/automation-handler/automation-handler.processor';
+import { ScheduledAutomationProcessor } from '~/modules/jobs/jobs/scheduled-automation/scheduled-automation.processor';
 import { DataExportProcessor } from '~/modules/jobs/jobs/data-export/data-export.processor';
 import { DataExportController } from '~/modules/jobs/jobs/data-export/data-export.controller';
 import { DataExportCleanUpProcessor } from '~/modules/jobs/jobs/data-export-clean-up/data-export-clean-up.processor';
@@ -114,6 +116,8 @@ export const JobsModuleMetadata = {
     SourceCreateProcessor,
     SourceDeleteProcessor,
     WebhookHandlerProcessor,
+    AutomationHandlerProcessor,
+    ScheduledAutomationProcessor,
     DataExportProcessor,
     DataExportCleanUpProcessor,
     ThumbnailGeneratorProcessor,

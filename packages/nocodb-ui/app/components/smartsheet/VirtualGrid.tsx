@@ -128,7 +128,7 @@ const GridRow = memo(function GridRow({
             {rowIndex + 1}
           </span>
         </div>
-        {!readOnly && (
+        {/* {!readOnly && (
           <button
             onClick={() => onDeleteRow?.(rowIndex)}
             className="absolute right-1 p-1 opacity-0 group-hover:opacity-100 hover:bg-red-100 rounded-md transition-all"
@@ -136,7 +136,7 @@ const GridRow = memo(function GridRow({
           >
             <Trash2 className="w-3.5 h-3.5 text-red-500" />
           </button>
-        )}
+        )} */}
       </div>
 
       {/* Cells */}

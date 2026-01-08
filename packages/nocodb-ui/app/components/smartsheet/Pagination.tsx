@@ -34,9 +34,6 @@ export function Pagination({
   const [showPageSizeMenu, setShowPageSizeMenu] = useState(false);
 
   const totalPages = Math.ceil(totalRows / pageSize) || 1;
-  const startRow = totalRows > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-  const endRow = Math.min(currentPage * pageSize, totalRows);
-
   const canGoPrev = currentPage > 1;
   const canGoNext = currentPage < totalPages;
 
@@ -71,11 +68,6 @@ export function Pagination({
         <span className="text-sm text-gray-600">
           共 <span className="font-medium text-gray-900">{totalRows.toLocaleString()}</span> 条记录
         </span>
-        {totalRows > 0 && (
-          <span className="text-sm text-gray-500">
-            显示 {startRow.toLocaleString()} - {endRow.toLocaleString()} 条
-          </span>
-        )}
       </div>
 
       {/* Right: Pagination controls */}

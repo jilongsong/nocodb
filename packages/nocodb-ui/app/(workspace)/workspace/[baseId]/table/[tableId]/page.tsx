@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useEffect, useCallback } from "react";
+import { use, useState, useEffect, useCallback, useRef } from "react";
 import {
   Plus,
   Grid3X3,
@@ -15,6 +15,8 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/app/components/ui";
@@ -24,7 +26,8 @@ import { useViewColumns } from "@/app/composables/useViewColumns";
 import { useViewSorts } from "@/app/composables/useViewSorts";
 import { useViewFilters } from "@/app/composables/useViewFilters";
 import { ViewOptionsMenu } from "@/components/workspace/menus/ViewOptionsMenu";
-import { VirtualGrid, Toolbar, ColumnEditor, Pagination } from "@/app/components/smartsheet";
+import { VirtualGrid, ColumnEditor, Pagination, FormView } from "@/app/components/smartsheet";
+import { GridToolbar, FormToolbar } from "@/app/components/smartsheet/toolbar";
 import type { SortType } from "nocodb-sdk";
 import type { ColumnType } from "nocodb-sdk";
 import { ViewTypes } from "nocodb-sdk";
@@ -106,6 +109,81 @@ export default function TablePage({
   
   // Toolbar state
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchField, setSearchField] = useState<string | null>(null);
+
+  // Form preview mode
+  const [isFormPreviewMode, setIsFormPreviewMode] = useState(false);
+
+  // Fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Build search where clause
+  const buildSearchWhere = useCallback((query: string, fieldId: string | null): string => {
+    if (!query.trim()) return "";
+    
+    const column = fieldId 
+      ? columns.find(c => c.id === fieldId)
+      : columns.find(c => c.pv) || columns[0];
+    
+    if (!column) return "";
+    
+    // Use 'like' for text columns, 'eq' for others
+    const isTextColumn = ['SingleLineText', 'LongText', 'Email', 'URL', 'PhoneNumber'].includes(column.uidt as string);
+    const op = isTextColumn ? 'like' : 'eq';
+    const value = isTextColumn ? `%${query}%` : query;
+    
+    return `(${column.id},${op},${value})`;
+  }, [columns]);
+
+  // Debounce timer ref
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Handle search change with debounce
+  const handleSearchChange = useCallback((query: string, field: string | null) => {
+    setSearchQuery(query);
+    setSearchField(field);
+    
+    // Clear previous debounce
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current);
+    }
+    
+    // Debounce the search
+    searchDebounceRef.current = setTimeout(() => {
+      const where = buildSearchWhere(query, field);
+      loadData({ where, offset: 0 });
+    }, 500);
+  }, [buildSearchWhere, loadData]);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, []);
+
+  // Toggle fullscreen
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      containerRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  }, []);
+
+  // Listen for fullscreen change
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
   
   // Column editor state
   const [columnEditorOpen, setColumnEditorOpen] = useState(false);
@@ -267,46 +345,81 @@ export default function TablePage({
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* Table Header */}
+    <div ref={containerRef} className={`h-full flex flex-col ${isFullscreen ? 'bg-white' : ''}`}>
+      {/* Table Header - Breadcrumb Style */}
       <div className="bg-white border-b border-gray-200 px-4 py-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link 
-              href={`/workspace/${baseId}`}
-              className="p-1 hover:bg-gray-100 rounded"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-500" />
-            </Link>
-            <h1 className="text-lg font-semibold text-gray-900">
+          <nav className="flex items-center gap-2 text-sm">
+            {!isFullscreen && (
+              <>
+                <Link 
+                  href={`/workspace/${baseId}`}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>返回</span>
+                </Link>
+                <span className="text-gray-300">/</span>
+              </>
+            )}
+            <span className="font-medium text-gray-900">
               {tableMeta?.title || "表格"}
-            </h1>
-            <span className="text-sm text-gray-500">
-              {columns.length} 列 · {rows.length} 行
             </span>
-          </div>
-
+            {activeView && !activeView.is_default && (
+              <>
+                <span className="text-gray-300">/</span>
+                <span className="text-gray-600">{activeView.title}</span>
+              </>
+            )}
+          </nav>
+          
+          {/* Fullscreen Toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title={isFullscreen ? "退出全屏" : "全屏模式"}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="w-4 h-4 text-gray-500" />
+            ) : (
+              <Maximize2 className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Toolbar */}
-      <Toolbar
-        columns={columns}
-        filters={filters}
-        sorts={sorts}
-        searchQuery={searchQuery}
-        onAddFilter={addFilter}
-        onUpdateFilter={updateFilter}
-        onDeleteFilter={deleteFilter}
-        onAddSort={addSort}
-        onUpdateSort={updateSort}
-        onDeleteSort={deleteSort}
-        onSearchChange={setSearchQuery}
-        onAddColumn={() => {
-          setEditingColumn(null);
-          setColumnEditorOpen(true);
-        }}
-      />
+      {/* View-specific Toolbar */}
+      {activeView?.type === ViewTypes.FORM ? (
+        <FormToolbar
+          viewId={currentViewId}
+          tableId={tableId}
+          tableName={tableMeta?.title}
+          viewUuid={(activeView as any)?.uuid}
+          viewPassword={(activeView as any)?.password}
+          readOnly={false}
+          isPreviewMode={isFormPreviewMode}
+          onPreviewToggle={() => setIsFormPreviewMode(!isFormPreviewMode)}
+          onShareChange={() => {
+            // Reload views to update uuid after share status changes
+            loadViews(tableId, true);
+          }}
+        />
+      ) : (
+        <GridToolbar
+          columns={columns}
+          filters={filters}
+          sorts={sorts}
+          searchQuery={searchQuery}
+          searchField={searchField}
+          onAddFilter={addFilter}
+          onUpdateFilter={updateFilter}
+          onDeleteFilter={deleteFilter}
+          onAddSort={addSort}
+          onUpdateSort={updateSort}
+          onDeleteSort={deleteSort}
+          onSearchChange={handleSearchChange}
+        />
+      )}
 
       {/* View Tabs */}
       <div className="bg-white border-b border-gray-200 px-4 py-2">
@@ -467,7 +580,16 @@ export default function TablePage({
           />
         )}
         {activeView?.type === ViewTypes.GALLERY && <GalleryView />}
-        {activeView?.type === ViewTypes.FORM && <FormView />}
+        {activeView?.type === ViewTypes.FORM && (
+          <FormView
+            viewId={currentViewId}
+            baseId={baseId}
+            tableId={tableId}
+            columns={columns}
+            tableName={tableMeta?.title}
+            isEditable={!isFormPreviewMode}
+          />
+        )}
         {activeView?.type === ViewTypes.KANBAN && <KanbanView />}
         {activeView?.type === ViewTypes.CALENDAR && <CalendarView />}
         {!activeView && views.length === 0 && (
@@ -541,17 +663,6 @@ function GalleryView() {
   );
 }
 
-function FormView() {
-  return (
-    <div className="flex items-center justify-center h-64 text-gray-500">
-      <div className="text-center">
-        <FormInput className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-        <p>表单视图</p>
-        <p className="text-sm text-gray-400 mt-2">此视图类型开发中...</p>
-      </div>
-    </div>
-  );
-}
 
 function KanbanView() {
   return (

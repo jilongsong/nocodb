@@ -6,7 +6,6 @@ import {
   Filter,
   SortAsc,
   SortDesc,
-  Search,
   EyeOff,
   Columns,
   Download,
@@ -16,6 +15,7 @@ import {
   ChevronDown,
   Trash2,
 } from "lucide-react";
+import { SearchData } from "./SearchData";
 import { Button } from "@/app/components/ui";
 import {
   DropdownMenu,
@@ -51,6 +51,7 @@ interface ToolbarProps {
   filters: FilterCondition[];
   sorts: SortType[];
   searchQuery: string;
+  searchField: string | null;
   // Filter actions
   onAddFilter: (columnId: string, comparisonOp?: FilterComparisonOp, value?: any) => void;
   onUpdateFilter: (filterId: string, updates: Partial<FilterCondition>) => void;
@@ -60,7 +61,7 @@ interface ToolbarProps {
   onUpdateSort: (sortId: string, updates: Partial<SortType>) => void;
   onDeleteSort: (sortId: string) => void;
   // Other
-  onSearchChange: (query: string) => void;
+  onSearchChange: (query: string, field: string | null) => void;
   onExport?: () => void;
   onImport?: () => void;
   onAddColumn?: () => void;
@@ -72,6 +73,7 @@ export function Toolbar({
   filters,
   sorts,
   searchQuery,
+  searchField,
   onAddFilter,
   onUpdateFilter,
   onDeleteFilter,
@@ -86,7 +88,6 @@ export function Toolbar({
 }: ToolbarProps) {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [isSearchExpanded, setIsSearchExpanded] = useState(false);
 
   // Filter columns (exclude system columns)
   const filterableColumns = columns.filter(
@@ -114,48 +115,12 @@ export function Toolbar({
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200">
       {/* Search */}
-      <div className="relative">
-        {isSearchExpanded ? (
-          <div className="flex items-center gap-1">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => onSearchChange(e.target.value)}
-                placeholder="搜索..."
-                className="w-48 pl-8 pr-8 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                autoFocus
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => onSearchChange("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                >
-                  <X className="w-3.5 h-3.5 text-gray-400 hover:text-gray-600" />
-                </button>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                setIsSearchExpanded(false);
-                onSearchChange("");
-              }}
-              className="p-1 hover:bg-gray-100 rounded"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsSearchExpanded(true)}
-          >
-            <Search className="w-4 h-4" />
-          </Button>
-        )}
-      </div>
+      <SearchData
+        columns={columns}
+        searchQuery={searchQuery}
+        searchField={searchField}
+        onSearchChange={onSearchChange}
+      />
 
       {/* Filter */}
       <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>

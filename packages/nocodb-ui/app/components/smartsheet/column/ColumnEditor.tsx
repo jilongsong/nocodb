@@ -23,6 +23,14 @@ import {
   Calculator,
   Search,
   ChevronDown,
+  QrCode,
+  Barcode,
+  MapPin,
+  Braces,
+  MousePointer,
+  Plus as PlusIcon,
+  ListOrdered,
+  UserPlus,
 } from "lucide-react";
 import { Button } from "@/app/components/ui";
 import {
@@ -33,29 +41,75 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 
-// Column type options
-const COLUMN_TYPES = [
-  { value: UITypes.SingleLineText, label: "单行文本", icon: Type },
-  { value: UITypes.LongText, label: "多行文本", icon: AlignLeft },
-  { value: UITypes.Number, label: "数字", icon: Hash },
-  { value: UITypes.Decimal, label: "小数", icon: Hash },
-  { value: UITypes.Checkbox, label: "复选框", icon: CheckSquare },
-  { value: UITypes.Date, label: "日期", icon: Calendar },
-  { value: UITypes.DateTime, label: "日期时间", icon: Calendar },
-  { value: UITypes.Time, label: "时间", icon: Clock },
-  { value: UITypes.Email, label: "邮箱", icon: Mail },
-  { value: UITypes.URL, label: "链接", icon: Link },
-  { value: UITypes.PhoneNumber, label: "电话", icon: Phone },
-  { value: UITypes.Currency, label: "货币", icon: DollarSign },
-  { value: UITypes.Percent, label: "百分比", icon: Percent },
-  { value: UITypes.SingleSelect, label: "单选", icon: List },
-  { value: UITypes.MultiSelect, label: "多选", icon: List },
-  { value: UITypes.Attachment, label: "附件", icon: Image },
-  { value: UITypes.Rating, label: "评分", icon: Star },
-  { value: UITypes.Duration, label: "时长", icon: Clock },
-  { value: UITypes.Formula, label: "公式", icon: Calculator },
-  { value: UITypes.User, label: "用户", icon: User },
+// Column type categories
+const COLUMN_TYPE_CATEGORIES = [
+  {
+    label: "基础类型",
+    types: [
+      { value: UITypes.SingleLineText, label: "单行文本", icon: Type },
+      { value: UITypes.LongText, label: "多行文本", icon: AlignLeft },
+      { value: UITypes.Number, label: "数字", icon: Hash },
+      { value: UITypes.Decimal, label: "小数", icon: Hash },
+      { value: UITypes.Checkbox, label: "复选框", icon: CheckSquare },
+    ],
+  },
+  {
+    label: "日期时间",
+    types: [
+      { value: UITypes.Date, label: "日期", icon: Calendar },
+      { value: UITypes.DateTime, label: "日期时间", icon: Calendar },
+      { value: UITypes.Time, label: "时间", icon: Clock },
+      { value: UITypes.Duration, label: "时长", icon: Clock },
+    ],
+  },
+  {
+    label: "选择类型",
+    types: [
+      { value: UITypes.SingleSelect, label: "单选", icon: List },
+      { value: UITypes.MultiSelect, label: "多选", icon: List },
+      { value: UITypes.Rating, label: "评分", icon: Star },
+    ],
+  },
+  {
+    label: "联系信息",
+    types: [
+      { value: UITypes.Email, label: "邮箱", icon: Mail },
+      { value: UITypes.URL, label: "链接", icon: Link },
+      { value: UITypes.PhoneNumber, label: "电话", icon: Phone },
+    ],
+  },
+  {
+    label: "数值类型",
+    types: [
+      { value: UITypes.Currency, label: "货币", icon: DollarSign },
+      { value: UITypes.Percent, label: "百分比", icon: Percent },
+      { value: UITypes.AutoNumber, label: "自动编号", icon: ListOrdered },
+    ],
+  },
+  {
+    label: "用户与协作",
+    types: [
+      { value: UITypes.User, label: "用户", icon: User },
+      { value: UITypes.CreatedBy, label: "创建人", icon: UserPlus },
+      { value: UITypes.LastModifiedBy, label: "修改人", icon: UserPlus },
+    ],
+  },
+  {
+    label: "高级类型",
+    types: [
+      { value: UITypes.Attachment, label: "附件", icon: Image },
+      { value: UITypes.Formula, label: "公式", icon: Calculator },
+      { value: UITypes.QrCode, label: "二维码", icon: QrCode },
+      { value: UITypes.Barcode, label: "条形码", icon: Barcode },
+      { value: UITypes.GeoData, label: "地理位置", icon: MapPin },
+      { value: UITypes.JSON, label: "JSON", icon: Braces },
+      { value: UITypes.Button, label: "按钮", icon: MousePointer },
+    ],
+  },
 ];
+
+// Flat list of all column types for filtering
+const COLUMN_TYPES = COLUMN_TYPE_CATEGORIES.flatMap((cat) => cat.types);
 
 interface ColumnEditorProps {
   open: boolean;
@@ -85,6 +139,9 @@ export function ColumnEditor({
   // Options for specific types
   const [selectOptions, setSelectOptions] = useState<string[]>([]);
   const [newOption, setNewOption] = useState("");
+  
+  // User type options
+  const [allowMultipleUsers, setAllowMultipleUsers] = useState(false);
 
   // Reset form when column changes
   useEffect(() => {
@@ -104,12 +161,25 @@ export function ColumnEditor({
         setUidt(UITypes.SingleLineText);
         setDescription("");
         setSelectOptions([]);
+        setAllowMultipleUsers(false);
       }
       setShowTypeSelector(false);
       setTypeSearch("");
       setNewOption("");
     }
   }, [open, column]);
+
+  // Filter categories and types by search
+  const filteredCategories = typeSearch
+    ? COLUMN_TYPE_CATEGORIES.map((cat) => ({
+        ...cat,
+        types: cat.types.filter(
+          (t) =>
+            t.label.toLowerCase().includes(typeSearch.toLowerCase()) ||
+            t.value.toLowerCase().includes(typeSearch.toLowerCase())
+        ),
+      })).filter((cat) => cat.types.length > 0)
+    : COLUMN_TYPE_CATEGORIES;
 
   // Filter column types
   const filteredTypes = COLUMN_TYPES.filter(
@@ -137,6 +207,13 @@ export function ColumnEditor({
             title: opt,
             order: idx + 1,
           })),
+        };
+      }
+
+      // Add User type meta
+      if (uidt === UITypes.User) {
+        (data as any).meta = {
+          is_multi: allowMultipleUsers,
         };
       }
 
@@ -223,30 +300,53 @@ export function ColumnEditor({
                     </div>
                   </div>
 
-                  {/* Type List */}
-                  <div className="p-1">
-                    {filteredTypes.map((type) => (
-                      <button
-                        key={type.value}
-                        type="button"
-                        onClick={() => {
-                          setUidt(type.value);
-                          setShowTypeSelector(false);
-                          setTypeSearch("");
-                        }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded hover:bg-gray-100 ${
-                          uidt === type.value ? "bg-blue-50 text-blue-600" : ""
-                        }`}
-                      >
-                        <type.icon className="w-4 h-4" />
-                        {type.label}
-                      </button>
+                  {/* Type List by Category */}
+                  <div className="py-1">
+                    {filteredCategories.map((category) => (
+                      <div key={category.label}>
+                        <div className="px-3 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wide bg-gray-50">
+                          {category.label}
+                        </div>
+                        {category.types.map((type) => (
+                          <button
+                            key={type.value}
+                            type="button"
+                            onClick={() => {
+                              setUidt(type.value);
+                              setShowTypeSelector(false);
+                              setTypeSearch("");
+                            }}
+                            className={`w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 ${
+                              uidt === type.value ? "bg-blue-50 text-blue-600" : ""
+                            }`}
+                          >
+                            <type.icon className="w-4 h-4" />
+                            {type.label}
+                          </button>
+                        ))}
+                      </div>
                     ))}
                   </div>
                 </div>
               )}
             </div>
           </div>
+
+          {/* User Type Options */}
+          {uidt === UITypes.User && (
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+              <input
+                type="checkbox"
+                id="allowMultipleUsers"
+                checked={allowMultipleUsers}
+                onChange={(e) => setAllowMultipleUsers(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label htmlFor="allowMultipleUsers" className="text-sm text-gray-700">
+                允许添加多个用户
+              </label>
+            </div>
+          )}
 
           {/* Select Options (for SingleSelect/MultiSelect) */}
           {(uidt === UITypes.SingleSelect || uidt === UITypes.MultiSelect) && (

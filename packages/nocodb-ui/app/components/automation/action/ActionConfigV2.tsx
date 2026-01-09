@@ -4,26 +4,18 @@ import { useCallback } from "react";
 import {
   Trash2,
   AlertCircle,
-  Database,
   Mail,
   Globe,
-  Clock,
-  GitBranch,
   Code,
   MessageSquare,
   PlusCircle,
-  Loader2,
 } from "lucide-react";
 import { Button } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { Select } from "@/app/components/ui/Select";
-import { RecordUpdateConfig } from "./RecordUpdateConfig";
 import { RecordCreateConfig } from "./RecordCreateConfig";
 import { WebhookConfig } from "./WebhookConfig";
 import { EmailConfig } from "./EmailConfig";
-import { DelayConfig } from "./DelayConfig";
-import { ConditionBranchConfig } from "./ConditionBranchConfig";
-import { LoopConfig } from "./LoopConfig";
 import type { TableInfo } from "../shared/TableSelector";
 import type { FieldInfo } from "@/app/composables/useTableColumns";
 import type {
@@ -45,9 +37,7 @@ interface ActionConfigV2Props {
 }
 
 const actionMeta: Record<ActionType, { label: string; icon: React.ElementType; color: string }> = {
-  "record.update": { label: "更新记录", icon: Database, color: "blue" },
   "record.create": { label: "创建记录", icon: PlusCircle, color: "green" },
-  "record.delete": { label: "删除记录", icon: Trash2, color: "red" },
   "notification.email": { label: "发送邮件", icon: Mail, color: "purple" },
   "notification.webhook": { label: "调用 Webhook", icon: Globe, color: "indigo" },
   "notification.slack": { label: "发送 Slack", icon: MessageSquare, color: "purple" },
@@ -55,9 +45,6 @@ const actionMeta: Record<ActionType, { label: string; icon: React.ElementType; c
   "notification.dingtalk": { label: "发送钉钉", icon: MessageSquare, color: "blue" },
   "notification.wechat": { label: "发送企微", icon: MessageSquare, color: "green" },
   "script.run": { label: "运行脚本", icon: Code, color: "gray" },
-  "flow.condition": { label: "条件分支", icon: GitBranch, color: "orange" },
-  "flow.delay": { label: "延迟执行", icon: Clock, color: "yellow" },
-  "flow.loop": { label: "循环执行", icon: Loader2, color: "cyan" },
 };
 
 const errorBehaviorOptions: { value: ActionErrorBehavior; label: string; desc: string }[] = [
@@ -106,18 +93,6 @@ export function ActionConfigV2({
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 space-y-4">
-        {/* Record Update */}
-        {action.type === "record.update" && (
-          <RecordUpdateConfig
-            config={action.config}
-            onChange={handleConfigChange}
-            tables={tables}
-            currentTableId={tableId}
-            getFieldsForTable={getFieldsForTable}
-            triggerFields={triggerFields}
-          />
-        )}
-
         {/* Record Create */}
         {action.type === "record.create" && (
           <RecordCreateConfig
@@ -127,16 +102,6 @@ export function ActionConfigV2({
             currentTableId={tableId}
             getFieldsForTable={getFieldsForTable}
             triggerFields={triggerFields}
-          />
-        )}
-
-        {/* Record Delete */}
-        {action.type === "record.delete" && (
-          <RecordDeleteConfig
-            config={action.config}
-            onChange={handleConfigChange}
-            tables={tables}
-            currentTableId={tableId}
           />
         )}
 
@@ -162,32 +127,6 @@ export function ActionConfigV2({
           />
         )}
 
-        {/* Delay */}
-        {action.type === "flow.delay" && (
-          <DelayConfig config={action.config} onChange={handleConfigChange} />
-        )}
-
-        {/* Condition Branch */}
-        {action.type === "flow.condition" && (
-          <ConditionBranchConfig
-            config={action.config}
-            onChange={handleConfigChange}
-            triggerFields={triggerFields}
-          />
-        )}
-
-        {/* Loop */}
-        {action.type === "flow.loop" && (
-          <LoopConfig
-            config={action.config}
-            onChange={handleConfigChange}
-            tables={tables}
-            currentTableId={tableId}
-            getFieldsForTable={getFieldsForTable}
-            triggerFields={triggerFields}
-          />
-        )}
-
         {/* Script */}
         {action.type === "script.run" && (
           <ScriptConfig config={action.config} onChange={handleConfigChange} />
@@ -201,42 +140,6 @@ export function ActionConfigV2({
             onChange={(v) => onChange({ on_error: v as ActionErrorBehavior })}
             options={errorBehaviorOptions.map((opt) => ({ value: opt.value, label: opt.label }))}
           />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Record Delete Config
-function RecordDeleteConfig({
-  config,
-  onChange,
-  tables,
-  currentTableId,
-}: {
-  config: ActionConfigType;
-  onChange: (updates: Partial<ActionConfigType>) => void;
-  tables: TableInfo[];
-  currentTableId: string;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-2 p-3 bg-red-50 rounded-lg">
-        <Trash2 className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-        <div className="text-sm text-red-700">
-          <p className="font-medium">删除记录</p>
-          <p className="text-red-600 mt-1">
-            将删除触发此自动化的当前记录。此操作不可撤销。
-          </p>
-        </div>
-      </div>
-
-      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-amber-500" />
-          <p className="text-sm text-amber-700">
-            确保已做好数据备份，删除操作无法恢复
-          </p>
         </div>
       </div>
     </div>

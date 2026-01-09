@@ -42,11 +42,6 @@ export interface ExecutionVariables {
     table_id: string;
     automation_id: string;
   };
-  loop?: {
-    index: number;
-    item: any;
-    total: number;
-  };
 }
 
 export interface ActionResult {
@@ -176,20 +171,10 @@ export class AutomationExecutorService {
     execContext: ExecutionContext,
     actions: AutomationActionType[],
   ): Promise<void> {
-    // 获取主流程动作（排除分支子动作）
-    const branchChildIds = new Set<string>();
-    actions.forEach((action) => {
-      if (action.true_branch_id) branchChildIds.add(action.true_branch_id);
-      if (action.false_branch_id) branchChildIds.add(action.false_branch_id);
-    });
-
-    const mainActions = actions
-      .filter((a) => !branchChildIds.has(a.id!))
-      .sort((a, b) => (a.order || 0) - (b.order || 0));
-
     // 按顺序执行动作
-    for (const action of mainActions) {
-      await this.executeAction(execContext, action, actions);
+    const sortedActions = actions.sort((a, b) => (a.order || 0) - (b.order || 0));
+    for (const action of sortedActions) {
+      await this.executeAction(execContext, action);
     }
   }
 
@@ -199,7 +184,6 @@ export class AutomationExecutorService {
   private async executeAction(
     execContext: ExecutionContext,
     action: AutomationActionType,
-    allActions: AutomationActionType[],
   ): Promise<ActionResult> {
     const { context, logId } = execContext;
     const startTime = Date.now();
@@ -218,14 +202,8 @@ export class AutomationExecutorService {
       let result: ActionResult;
 
       switch (action.type) {
-        case 'record.update':
-          result = await this.executeRecordUpdate(execContext, action);
-          break;
         case 'record.create':
           result = await this.executeRecordCreate(execContext, action);
-          break;
-        case 'record.delete':
-          result = await this.executeRecordDelete(execContext, action);
           break;
         case 'notification.email':
           result = await this.executeEmailNotification(execContext, action);
@@ -236,15 +214,6 @@ export class AutomationExecutorService {
         case 'notification.wechat':
         case 'notification.slack':
           result = await this.executeWebhookNotification(execContext, action);
-          break;
-        case 'flow.condition':
-          result = await this.executeConditionBranch(execContext, action, allActions);
-          break;
-        case 'flow.delay':
-          result = await this.executeDelay(execContext, action);
-          break;
-        case 'flow.loop':
-          result = await this.executeLoop(execContext, action, allActions);
           break;
         default:
           result = { success: false, error: `Unknown action type: ${action.type}` };
@@ -287,66 +256,6 @@ export class AutomationExecutorService {
         throw error;
       }
 
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 执行记录更新动作
-   */
-  private async executeRecordUpdate(
-    execContext: ExecutionContext,
-    action: AutomationActionType,
-  ): Promise<ActionResult> {
-    const { context, variables, testMode } = execContext;
-    const config = action.config as ActionConfig;
-
-    if (!variables.record?.Id && !variables.record?.id) {
-      return { success: false, error: 'No record ID available for update' };
-    }
-
-    const recordId = variables.record.Id || variables.record.id;
-    const tableId = config.target_table_id || execContext.automation.fk_model_id;
-
-    if (!tableId) {
-      return { success: false, error: 'No target table specified' };
-    }
-
-    // 构建更新数据
-    const updateData = this.buildFieldMappingData(execContext, config.field_mappings || []);
-
-    if (Object.keys(updateData).length === 0) {
-      return { success: true, output: { message: 'No fields to update' } };
-    }
-
-    if (testMode) {
-      return {
-        success: true,
-        output: { testMode: true, updateData, recordId },
-      };
-    }
-
-    try {
-      // 直接使用 Model 进行数据操作
-      const model = await Model.get(context, tableId);
-      if (!model) {
-        return { success: false, error: `Table not found: ${tableId}` };
-      }
-
-      const source = await Source.get(context, model.source_id);
-      const baseModel = await Model.getBaseModelSQL(context, {
-        id: model.id,
-        dbDriver: await NcConnectionMgrv2.get(source),
-        source,
-      });
-
-      await baseModel.updateByPk(recordId, updateData, null, null);
-
-      return {
-        success: true,
-        output: { updated: true, recordId, fields: Object.keys(updateData) },
-      };
-    } catch (error: any) {
       return { success: false, error: error.message };
     }
   }
@@ -406,57 +315,6 @@ export class AutomationExecutorService {
       return {
         success: true,
         output: { created: true, record: result },
-      };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * 执行记录删除动作
-   */
-  private async executeRecordDelete(
-    execContext: ExecutionContext,
-    action: AutomationActionType,
-  ): Promise<ActionResult> {
-    const { context, variables, testMode } = execContext;
-
-    if (!variables.record?.Id && !variables.record?.id) {
-      return { success: false, error: 'No record ID available for delete' };
-    }
-
-    const recordId = variables.record.Id || variables.record.id;
-    const tableId = execContext.automation.fk_model_id;
-
-    if (!tableId) {
-      return { success: false, error: 'No table specified' };
-    }
-
-    if (testMode) {
-      return {
-        success: true,
-        output: { testMode: true, recordId, tableId },
-      };
-    }
-
-    try {
-      const model = await Model.get(context, tableId);
-      if (!model) {
-        return { success: false, error: `Table not found: ${tableId}` };
-      }
-
-      const source = await Source.get(context, model.source_id);
-      const baseModel = await Model.getBaseModelSQL(context, {
-        id: model.id,
-        dbDriver: await NcConnectionMgrv2.get(source),
-        source,
-      });
-
-      await baseModel.delByPk(recordId, null, null);
-
-      return {
-        success: true,
-        output: { deleted: true, recordId },
       };
     } catch (error: any) {
       return { success: false, error: error.message };
@@ -565,131 +423,6 @@ export class AutomationExecutorService {
         error: error.response?.data?.message || error.message,
       };
     }
-  }
-
-  /**
-   * 执行条件分支动作
-   */
-  private async executeConditionBranch(
-    execContext: ExecutionContext,
-    action: AutomationActionType,
-    allActions: AutomationActionType[],
-  ): Promise<ActionResult> {
-    const config = action.config as ActionConfig;
-
-    if (!config.condition) {
-      return { success: false, error: 'No condition specified' };
-    }
-
-    const conditionMet = await this.evaluateConditions(
-      execContext,
-      config.condition as FilterGroup,
-      execContext.variables.record,
-    );
-
-    const branchId = conditionMet ? action.true_branch_id : action.false_branch_id;
-    const branchAction = branchId ? allActions.find((a) => a.id === branchId) : null;
-
-    if (branchAction) {
-      await this.executeAction(execContext, branchAction, allActions);
-    }
-
-    return {
-      success: true,
-      output: { conditionMet, executedBranch: conditionMet ? 'true' : 'false' },
-    };
-  }
-
-  /**
-   * 执行延迟动作
-   */
-  private async executeDelay(
-    execContext: ExecutionContext,
-    action: AutomationActionType,
-  ): Promise<ActionResult> {
-    const { testMode } = execContext;
-    const config = action.config as ActionConfig;
-
-    const delaySeconds = config.delay_seconds || 0;
-
-    if (testMode) {
-      return {
-        success: true,
-        output: { testMode: true, delaySeconds, skipped: true },
-      };
-    }
-
-    if (delaySeconds > 0) {
-      await new Promise((resolve) => setTimeout(resolve, delaySeconds * 1000));
-    }
-
-    return {
-      success: true,
-      output: { delayed: true, seconds: delaySeconds },
-    };
-  }
-
-  /**
-   * 执行循环动作
-   */
-  private async executeLoop(
-    execContext: ExecutionContext,
-    action: AutomationActionType,
-    allActions: AutomationActionType[],
-  ): Promise<ActionResult> {
-    const { testMode } = execContext;
-    const config = action.config as ActionConfig;
-
-    // 获取要循环的数据
-    let items: any[] = [];
-    if (config.loop_field_id) {
-      const fieldValue = execContext.variables.record[config.loop_field_id];
-      if (Array.isArray(fieldValue)) {
-        items = fieldValue;
-      } else if (fieldValue) {
-        items = [fieldValue];
-      }
-    }
-
-    const limit = config.loop_limit || 100;
-    items = items.slice(0, limit);
-
-    if (testMode) {
-      return {
-        success: true,
-        output: { testMode: true, itemCount: items.length, limit },
-      };
-    }
-
-    // 获取循环内要执行的动作
-    const loopActions = allActions.filter(
-      (a) => a.id !== action.id && a.order! > action.order!,
-    );
-
-    const results: any[] = [];
-    for (let i = 0; i < items.length; i++) {
-      // 设置循环变量
-      execContext.variables.loop = {
-        index: i,
-        item: items[i],
-        total: items.length,
-      };
-
-      // 执行循环内的动作
-      for (const loopAction of loopActions) {
-        await this.executeAction(execContext, loopAction, allActions);
-      }
-
-      results.push({ index: i, item: items[i] });
-    }
-
-    // 清除循环变量
-    delete execContext.variables.loop;
-
-    return {
-      success: true,
-      output: { loopCount: items.length, results },
-    };
   }
 
   /**
@@ -863,44 +596,6 @@ export class AutomationExecutorService {
       if (columnKey && value !== undefined) {
         data[columnKey] = value;
         this.logger.log(`Field mapping: ${source_field_id} -> ${columnKey} = ${value}`);
-      }
-    }
-
-    return data;
-  }
-
-  /**
-   * 构建字段映射数据（旧方法，使用字段ID）
-   */
-  private buildFieldMappingData(
-    execContext: ExecutionContext,
-    fieldMappings: any[],
-  ): Record<string, any> {
-    const data: Record<string, any> = {};
-
-    for (const mapping of fieldMappings) {
-      const { target_field_id, value_type, source_field_id, static_value, formula } = mapping;
-
-      let value: any;
-      switch (value_type) {
-        case 'static':
-          value = static_value;
-          break;
-        case 'field':
-          value = execContext.variables.record[source_field_id];
-          break;
-        case 'formula':
-          value = this.resolveTemplate(execContext, formula || '');
-          break;
-        case 'variable':
-          value = this.resolveVariable(execContext, static_value || '');
-          break;
-        default:
-          value = static_value;
-      }
-
-      if (target_field_id && value !== undefined) {
-        data[target_field_id] = value;
       }
     }
 

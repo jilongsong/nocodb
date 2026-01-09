@@ -14,8 +14,6 @@ import {
   type Edge,
   type Connection,
   type NodeTypes,
-  type EdgeTypes,
-  MarkerType,
   ConnectionLineType,
   BackgroundVariant,
 } from "@xyflow/react";
@@ -32,10 +30,8 @@ import {
 } from "lucide-react";
 import { TriggerNode, type TriggerNodeData } from "./nodes/TriggerNode";
 import { ActionNode, type ActionNodeData } from "./nodes/ActionNode";
-import { ConditionNode, type ConditionNodeData } from "./nodes/ConditionNode";
 import { AddNode, type AddNodeData } from "./nodes/AddNode";
 import { NodeToolbar } from "./NodeToolbar";
-import { BranchEdge } from "./edges/BranchEdge";
 import type {
   AutomationTrigger,
   AutomationAction,
@@ -47,13 +43,7 @@ import type {
 const nodeTypes: NodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
-  condition: ConditionNode,
   addNode: AddNode,
-};
-
-// Edge types registration
-const edgeTypes: EdgeTypes = {
-  branch: BranchEdge,
 };
 
 // Labels for triggers
@@ -71,9 +61,7 @@ const triggerLabels: Record<TriggerType, string> = {
 
 // Labels for actions
 const actionLabels: Record<ActionType, string> = {
-  "record.update": "更新记录",
   "record.create": "创建记录",
-  "record.delete": "删除记录",
   "notification.email": "发送邮件",
   "notification.webhook": "调用 Webhook",
   "notification.slack": "发送 Slack",
@@ -81,9 +69,6 @@ const actionLabels: Record<ActionType, string> = {
   "notification.dingtalk": "发送钉钉",
   "notification.wechat": "发送企微",
   "script.run": "运行脚本",
-  "flow.condition": "条件分支",
-  "flow.delay": "延迟执行",
-  "flow.loop": "循环执行",
 };
 
 interface WorkflowCanvasProps {
@@ -92,7 +77,7 @@ interface WorkflowCanvasProps {
   selectedNodeId: string | null;
   onSelectNode: (id: string | null) => void;
   onUpdateTrigger: (trigger: Partial<AutomationTrigger>) => void;
-  onAddAction: (type: ActionType, afterNodeId?: string, branch?: "true" | "false") => void;
+  onAddAction: (type: ActionType, afterNodeId?: string) => void;
   onUpdateAction: (id: string, updates: Partial<AutomationAction>) => void;
   onDeleteAction: (id: string) => void;
   onReorderActions: (actions: AutomationAction[]) => void;
@@ -102,13 +87,12 @@ interface WorkflowCanvasProps {
 function buildNodes(
   trigger: AutomationTrigger,
   actions: AutomationAction[],
-  onAddClick: (afterNodeId?: string, branch?: "true" | "false") => void
+  onAddClick: (afterNodeId?: string) => void
 ): Node[] {
   const nodes: Node[] = [];
   const NODE_WIDTH = 200;
   const NODE_HEIGHT = 70;
   const VERTICAL_GAP = 60;
-  const HORIZONTAL_GAP = 240;
   const CENTER_X = 300;
 
   // Trigger node
@@ -126,115 +110,25 @@ function buildNodes(
 
   // Build action nodes with proper positioning
   let currentY = 40 + NODE_HEIGHT + VERTICAL_GAP;
-  const processedActions = new Set<string>();
 
-  // Get main flow actions (not in branches)
-  const branchChildIds = new Set<string>();
-  actions.forEach((action) => {
-    if (action.true_branch_id) branchChildIds.add(action.true_branch_id);
-    if (action.false_branch_id) branchChildIds.add(action.false_branch_id);
-  });
+  // Sort actions by order
+  const sortedActions = [...actions].sort((a, b) => a.order - b.order);
 
-  const mainActions = actions
-    .filter((a) => !branchChildIds.has(a.id))
-    .sort((a, b) => a.order - b.order);
+  // Process each action
+  sortedActions.forEach((action) => {
+    nodes.push({
+      id: action.id,
+      type: "action",
+      position: { x: CENTER_X, y: currentY },
+      data: {
+        label: actionLabels[action.type] || action.type,
+        actionType: action.type,
+        isConfigured: isActionConfigured(action),
+        order: action.order,
+      } as ActionNodeData,
+    });
 
-  // Process each main action
-  mainActions.forEach((action, index) => {
-    if (processedActions.has(action.id)) return;
-    processedActions.add(action.id);
-
-    const isCondition = action.type === "flow.condition";
-
-    if (isCondition) {
-      // Condition node
-      nodes.push({
-        id: action.id,
-        type: "condition",
-        position: { x: CENTER_X, y: currentY },
-        data: {
-          label: actionLabels[action.type] || action.type,
-          condition: action.config.condition,
-          isConfigured: (action.config.condition?.conditions?.length || 0) > 0,
-          conditionCount: action.config.condition?.conditions?.length || 0,
-        } as ConditionNodeData,
-      });
-
-      // Add branch nodes
-      const trueAction = actions.find((a) => a.id === action.true_branch_id);
-      const falseAction = actions.find((a) => a.id === action.false_branch_id);
-
-      const branchY = currentY + NODE_HEIGHT + VERTICAL_GAP;
-
-      // True branch
-      if (trueAction) {
-        processedActions.add(trueAction.id);
-        nodes.push({
-          id: trueAction.id,
-          type: "action",
-          position: { x: CENTER_X - HORIZONTAL_GAP / 2, y: branchY },
-          data: {
-            label: actionLabels[trueAction.type] || trueAction.type,
-            actionType: trueAction.type,
-            isConfigured: isActionConfigured(trueAction),
-            order: trueAction.order,
-          } as ActionNodeData,
-        });
-      } else {
-        // Add placeholder for true branch
-        nodes.push({
-          id: `add-true-${action.id}`,
-          type: "addNode",
-          position: { x: CENTER_X - HORIZONTAL_GAP / 2 + NODE_WIDTH / 2 - 16, y: branchY },
-          data: {
-            onClick: () => onAddClick(action.id, "true"),
-          } as AddNodeData,
-        });
-      }
-
-      // False branch
-      if (falseAction) {
-        processedActions.add(falseAction.id);
-        nodes.push({
-          id: falseAction.id,
-          type: "action",
-          position: { x: CENTER_X + HORIZONTAL_GAP / 2, y: branchY },
-          data: {
-            label: actionLabels[falseAction.type] || falseAction.type,
-            actionType: falseAction.type,
-            isConfigured: isActionConfigured(falseAction),
-            order: falseAction.order,
-          } as ActionNodeData,
-        });
-      } else {
-        // Add placeholder for false branch
-        nodes.push({
-          id: `add-false-${action.id}`,
-          type: "addNode",
-          position: { x: CENTER_X + HORIZONTAL_GAP / 2 + NODE_WIDTH / 2 - 16, y: branchY },
-          data: {
-            onClick: () => onAddClick(action.id, "false"),
-          } as AddNodeData,
-        });
-      }
-
-      currentY = branchY + NODE_HEIGHT + VERTICAL_GAP;
-    } else {
-      // Regular action node
-      nodes.push({
-        id: action.id,
-        type: "action",
-        position: { x: CENTER_X, y: currentY },
-        data: {
-          label: actionLabels[action.type] || action.type,
-          actionType: action.type,
-          isConfigured: isActionConfigured(action),
-          order: action.order,
-        } as ActionNodeData,
-      });
-
-      currentY += NODE_HEIGHT + VERTICAL_GAP;
-    }
+    currentY += NODE_HEIGHT + VERTICAL_GAP;
   });
 
   // Add node at the end
@@ -254,23 +148,15 @@ function buildNodes(
 function buildEdges(trigger: AutomationTrigger, actions: AutomationAction[]): Edge[] {
   const edges: Edge[] = [];
 
-  // Get main flow actions
-  const branchChildIds = new Set<string>();
-  actions.forEach((action) => {
-    if (action.true_branch_id) branchChildIds.add(action.true_branch_id);
-    if (action.false_branch_id) branchChildIds.add(action.false_branch_id);
-  });
-
-  const mainActions = actions
-    .filter((a) => !branchChildIds.has(a.id))
-    .sort((a, b) => a.order - b.order);
+  // Sort actions by order
+  const sortedActions = [...actions].sort((a, b) => a.order - b.order);
 
   // Connect trigger to first action
-  if (mainActions.length > 0) {
+  if (sortedActions.length > 0) {
     edges.push({
       id: "trigger-to-first",
       source: "trigger",
-      target: mainActions[0].id,
+      target: sortedActions[0].id,
       type: "smoothstep",
       animated: true,
       style: { stroke: "#94a3b8", strokeWidth: 2 },
@@ -285,49 +171,18 @@ function buildEdges(trigger: AutomationTrigger, actions: AutomationAction[]): Ed
     });
   }
 
-  // Connect actions
-  mainActions.forEach((action, index) => {
-    const isCondition = action.type === "flow.condition";
-
-    if (isCondition) {
-      // True branch edge
-      const trueTarget = action.true_branch_id || `add-true-${action.id}`;
+  // Connect actions sequentially
+  sortedActions.forEach((action, index) => {
+    if (index < sortedActions.length - 1) {
       edges.push({
-        id: `${action.id}-true`,
+        id: `${action.id}-to-${sortedActions[index + 1].id}`,
         source: action.id,
-        sourceHandle: "true",
-        target: trueTarget,
-        type: "branch",
-        data: { branchType: "true" },
-        style: { stroke: "#22c55e", strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#22c55e" },
-      });
-
-      // False branch edge
-      const falseTarget = action.false_branch_id || `add-false-${action.id}`;
-      edges.push({
-        id: `${action.id}-false`,
-        source: action.id,
-        sourceHandle: "false",
-        target: falseTarget,
-        type: "branch",
-        data: { branchType: "false" },
-        style: { stroke: "#ef4444", strokeWidth: 2 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: "#ef4444" },
-      });
-    }
-
-    // Connect to next action
-    if (index < mainActions.length - 1 && !isCondition) {
-      edges.push({
-        id: `${action.id}-to-${mainActions[index + 1].id}`,
-        source: action.id,
-        target: mainActions[index + 1].id,
+        target: sortedActions[index + 1].id,
         type: "smoothstep",
         animated: true,
         style: { stroke: "#94a3b8", strokeWidth: 2 },
       });
-    } else if (index === mainActions.length - 1 && !isCondition) {
+    } else {
       edges.push({
         id: `${action.id}-to-add`,
         source: action.id,
@@ -345,17 +200,12 @@ function buildEdges(trigger: AutomationTrigger, actions: AutomationAction[]): Ed
 function isActionConfigured(action: AutomationAction): boolean {
   const { type, config } = action;
   switch (type) {
-    case "record.update":
     case "record.create":
       return (config.field_mappings?.length || 0) > 0;
     case "notification.email":
       return Boolean(config.recipients?.length && config.body_template);
     case "notification.webhook":
       return Boolean(config.webhook_url);
-    case "flow.condition":
-      return (config.condition?.conditions?.length || 0) > 0;
-    case "flow.delay":
-      return Boolean(config.delay_seconds);
     default:
       return true;
   }
@@ -374,12 +224,12 @@ export function WorkflowCanvas({
 }: WorkflowCanvasProps) {
   const [showToolbar, setShowToolbar] = useState(false);
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
-  const [addContext, setAddContext] = useState<{ afterNodeId?: string; branch?: "true" | "false" } | null>(null);
+  const [addContext, setAddContext] = useState<{ afterNodeId?: string } | null>(null);
   const [isLocked, setIsLocked] = useState(false);
 
   // Handle add node click
-  const handleAddClick = useCallback((afterNodeId?: string, branch?: "true" | "false") => {
-    setAddContext({ afterNodeId, branch });
+  const handleAddClick = useCallback((afterNodeId?: string) => {
+    setAddContext({ afterNodeId });
     setShowToolbar(true);
   }, []);
 
@@ -423,7 +273,7 @@ export function WorkflowCanvas({
   // Handle action selection from toolbar
   const handleActionSelect = useCallback(
     (type: ActionType) => {
-      onAddAction(type, addContext?.afterNodeId, addContext?.branch);
+      onAddAction(type, addContext?.afterNodeId);
       setShowToolbar(false);
       setAddContext(null);
     },
@@ -459,7 +309,6 @@ export function WorkflowCanvas({
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
         connectionLineType={ConnectionLineType.SmoothStep}
         defaultEdgeOptions={{
           type: "smoothstep",

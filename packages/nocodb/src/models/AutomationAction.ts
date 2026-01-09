@@ -27,13 +27,8 @@ export interface ActionConfig {
   webhook_method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   webhook_headers?: Record<string, string>;
   webhook_body_template?: string;
-  condition?: Record<string, any>;
-  delay_seconds?: number;
-  delay_until_field?: string;
   script_id?: string;
   script_params?: Record<string, any>;
-  loop_field_id?: string;
-  loop_limit?: number;
 }
 
 export interface AutomationActionType {
@@ -48,8 +43,6 @@ export interface AutomationActionType {
   on_error?: 'stop' | 'continue' | 'retry';
   retry_count?: number;
   next_action_id?: string;
-  true_branch_id?: string;
-  false_branch_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -66,8 +59,6 @@ export default class AutomationAction implements AutomationActionType {
   on_error?: 'stop' | 'continue' | 'retry';
   retry_count?: number;
   next_action_id?: string;
-  true_branch_id?: string;
-  false_branch_id?: string;
   created_at?: string;
   updated_at?: string;
 
@@ -130,8 +121,6 @@ export default class AutomationAction implements AutomationActionType {
       'on_error',
       'retry_count',
       'next_action_id',
-      'true_branch_id',
-      'false_branch_id',
     ]);
 
     // Serialize config to JSON string
@@ -190,8 +179,6 @@ export default class AutomationAction implements AutomationActionType {
       'on_error',
       'retry_count',
       'next_action_id',
-      'true_branch_id',
-      'false_branch_id',
     ]);
 
     // Serialize config to JSON string

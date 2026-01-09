@@ -2,7 +2,7 @@
 
 import { memo } from "react";
 import { Handle, Position } from "@xyflow/react";
-import { Database, Mail, Clock, Code, Repeat } from "lucide-react";
+import { Database, Mail, Code } from "lucide-react";
 import type { ActionType } from "@/app/composables/useAutomation/types";
 
 export interface ActionNodeData {
@@ -22,16 +22,12 @@ const actionConfig: Record<string, { icon: React.ElementType; color: string; bg:
   "record": { icon: Database, color: "text-blue-600", bg: "bg-blue-500" },
   "notification": { icon: Mail, color: "text-violet-600", bg: "bg-violet-500" },
   "script": { icon: Code, color: "text-slate-600", bg: "bg-slate-500" },
-  "flow.delay": { icon: Clock, color: "text-orange-600", bg: "bg-orange-500" },
-  "flow.loop": { icon: Repeat, color: "text-cyan-600", bg: "bg-cyan-500" },
 };
 
 function getActionConfig(actionType: ActionType) {
   if (actionType.startsWith("record.")) return actionConfig["record"];
   if (actionType.startsWith("notification.")) return actionConfig["notification"];
   if (actionType.startsWith("script.")) return actionConfig["script"];
-  if (actionType === "flow.delay") return actionConfig["flow.delay"];
-  if (actionType === "flow.loop") return actionConfig["flow.loop"];
   return { icon: Database, color: "text-gray-600", bg: "bg-gray-500" };
 }
 

@@ -2,13 +2,11 @@
 
 import React from "react";
 import {
-  Database,
+  PlusCircle,
   Mail,
   Globe,
-  Clock,
   Code,
-  Repeat,
-  GitBranch,
+  MessageSquare,
   X,
 } from "lucide-react";
 import type { ActionType } from "@/app/composables/useAutomation/types";
@@ -26,14 +24,12 @@ interface ActionOption {
 }
 
 const actionOptions: ActionOption[] = [
-  { type: "record.update", label: "更新记录", icon: Database, color: "bg-blue-500" },
-  { type: "record.create", label: "创建记录", icon: Database, color: "bg-green-500" },
-  { type: "record.delete", label: "删除记录", icon: Database, color: "bg-red-500" },
+  { type: "record.create", label: "创建记录", icon: PlusCircle, color: "bg-green-500" },
   { type: "notification.email", label: "发送邮件", icon: Mail, color: "bg-violet-500" },
   { type: "notification.webhook", label: "Webhook", icon: Globe, color: "bg-indigo-500" },
-  { type: "flow.condition", label: "条件分支", icon: GitBranch, color: "bg-orange-500" },
-  { type: "flow.delay", label: "延迟", icon: Clock, color: "bg-amber-500" },
-  // { type: "flow.loop", label: "循环", icon: Repeat, color: "bg-cyan-500" },
+  { type: "notification.feishu", label: "飞书", icon: MessageSquare, color: "bg-blue-500" },
+  { type: "notification.dingtalk", label: "钉钉", icon: MessageSquare, color: "bg-blue-600" },
+  { type: "notification.wechat", label: "企微", icon: MessageSquare, color: "bg-green-600" },
   { type: "script.run", label: "脚本", icon: Code, color: "bg-slate-500" },
 ];
 

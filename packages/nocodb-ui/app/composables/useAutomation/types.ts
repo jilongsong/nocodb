@@ -46,19 +46,14 @@ export interface AutomationTrigger {
 // ==================== 动作类型 ====================
 
 export type ActionType =
-  | "record.update" // 更新当前记录
   | "record.create" // 创建新记录
-  | "record.delete" // 删除记录
   | "notification.email" // 发送邮件
   | "notification.webhook" // 调用 Webhook
   | "notification.slack" // 发送 Slack 消息
   | "notification.feishu" // 发送飞书消息
   | "notification.dingtalk" // 发送钉钉消息
   | "notification.wechat" // 发送企业微信消息
-  | "script.run" // 运行脚本
-  | "flow.condition" // 条件分支
-  | "flow.delay" // 延迟执行
-  | "flow.loop"; // 循环执行
+  | "script.run"; // 运行脚本
 
 export type ActionErrorBehavior = "stop" | "continue" | "retry";
 
@@ -86,20 +81,9 @@ export interface ActionConfig {
   webhook_headers?: Record<string, string>;
   webhook_body_template?: string;
 
-  // 条件分支配置
-  condition?: FilterGroup;
-
-  // 延迟配置
-  delay_seconds?: number;
-  delay_until_field?: string;
-
   // 脚本配置
   script_id?: string;
   script_params?: Record<string, unknown>;
-
-  // 循环配置
-  loop_field_id?: string;
-  loop_limit?: number;
 }
 
 export interface AutomationAction {
@@ -111,8 +95,6 @@ export interface AutomationAction {
   retry_count?: number;
   retry_delay_seconds?: number;
   next_action_id?: string;
-  true_branch_id?: string;
-  false_branch_id?: string;
 }
 
 // ==================== 条件/筛选类型 ====================

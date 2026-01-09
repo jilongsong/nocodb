@@ -6,6 +6,8 @@ import type { AutomationActionType, ActionConfig } from '~/models/AutomationActi
 import { NcError } from '~/helpers/catchError';
 import NcConnectionMgrv2 from '~/utils/common/NcConnectionMgrv2';
 import { AutomationTriggerService } from '~/services/automation-trigger.service';
+import { AutomationVariableService } from '~/services/automation-variable.service';
+import { AutomationRecipientService } from '~/services/automation-recipient.service';
 import axios from 'axios';
 
 /**
@@ -68,8 +70,13 @@ export interface FilterGroup {
 @Injectable()
 export class AutomationExecutorService {
   private readonly logger = new Logger(AutomationExecutorService.name);
+  private readonly variableService: AutomationVariableService;
+  private readonly recipientService: AutomationRecipientService;
 
-  constructor() {}
+  constructor() {
+    this.variableService = new AutomationVariableService();
+    this.recipientService = new AutomationRecipientService();
+  }
 
   /**
    * 执行自动化工作流
@@ -205,6 +212,9 @@ export class AutomationExecutorService {
         case 'record.create':
           result = await this.executeRecordCreate(execContext, action);
           break;
+        case 'http.request':
+          result = await this.executeHttpRequest(execContext, action);
+          break;
         case 'notification.email':
           result = await this.executeEmailNotification(execContext, action);
           break;
@@ -214,6 +224,9 @@ export class AutomationExecutorService {
         case 'notification.wechat':
         case 'notification.slack':
           result = await this.executeWebhookNotification(execContext, action);
+          break;
+        case 'script.run':
+          result = await this.executeScript(execContext, action);
           break;
         default:
           result = { success: false, error: `Unknown action type: ${action.type}` };
@@ -353,6 +366,87 @@ export class AutomationExecutorService {
       success: true,
       output: { sent: true, recipients: config.recipients },
     };
+  }
+
+  /**
+   * 执行 HTTP 请求动作（增强版，支持完整响应捕获）
+   */
+  private async executeHttpRequest(
+    execContext: ExecutionContext,
+    action: AutomationActionType,
+  ): Promise<ActionResult> {
+    const { testMode } = execContext;
+    const config = action.config as ActionConfig;
+
+    if (!config.webhook_url) {
+      return { success: false, error: 'No request URL specified' };
+    }
+
+    // 解析 URL（支持变量）
+    const url = this.resolveTemplate(execContext, config.webhook_url);
+    const method = config.webhook_method || 'GET';
+    const headers = config.webhook_headers || {};
+    const timeout = (config as any).timeout_ms || 30000;
+
+    // 解析请求体
+    let body: any;
+    if (method !== 'GET' && (config.webhook_body_template || config.body_template)) {
+      const bodyStr = this.resolveTemplate(
+        execContext,
+        config.webhook_body_template || config.body_template || '',
+      );
+      try {
+        body = JSON.parse(bodyStr);
+      } catch {
+        body = bodyStr;
+      }
+    }
+
+    if (testMode) {
+      return {
+        success: true,
+        output: { testMode: true, url, method, headers, body },
+      };
+    }
+
+    try {
+      const response = await axios({
+        method: method as any,
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers,
+        },
+        data: body,
+        timeout,
+        validateStatus: () => true, // 不抛出 HTTP 错误
+      });
+
+      // 构建完整的响应输出
+      const output = this.variableService.buildHttpActionOutput({
+        status: response.status,
+        statusText: response.statusText,
+        headers: response.headers as Record<string, string>,
+        data: response.data,
+      });
+
+      // 使用自定义变量名或动作 ID
+      const varName = (config as any).response_variable_name || action.id;
+      if (varName) {
+        execContext.variables.action_results[varName] = output.output;
+      }
+
+      return {
+        success: response.status >= 200 && response.status < 300,
+        output: output.output,
+        error: response.status >= 400 ? `HTTP ${response.status}: ${response.statusText}` : undefined,
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 
   /**
@@ -603,31 +697,53 @@ export class AutomationExecutorService {
   }
 
   /**
-   * 解析模板字符串中的变量
+   * 解析模板字符串中的变量（使用增强变量服务）
    */
   private resolveTemplate(execContext: ExecutionContext, template: string): string {
     if (!template) return '';
 
-    return template.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
-      const value = this.resolveVariable(execContext, path.trim());
-      return value !== undefined ? String(value) : match;
+    // 构建变量上下文
+    const variableContext = this.variableService.buildVariableContext({
+      automation: execContext.automation,
+      triggerData: execContext.triggerData,
+      actionResults: execContext.variables.action_results,
     });
+
+    return this.variableService.resolveTemplate(template, variableContext);
   }
 
   /**
-   * 解析变量路径
+   * 解析变量路径（使用增强变量服务）
    */
   private resolveVariable(execContext: ExecutionContext, path: string): any {
-    const { variables } = execContext;
-    const parts = path.split('.');
+    const variableContext = this.variableService.buildVariableContext({
+      automation: execContext.automation,
+      triggerData: execContext.triggerData,
+      actionResults: execContext.variables.action_results,
+    });
 
-    let current: any = variables;
-    for (const part of parts) {
-      if (current === undefined || current === null) return undefined;
-      current = current[part];
-    }
+    return this.variableService.resolveVariable(path, variableContext);
+  }
 
-    return current;
+  /**
+   * 解析接收人列表
+   */
+  private async resolveRecipients(
+    context: NcContext,
+    execContext: ExecutionContext,
+    recipients: string[],
+  ): Promise<string[]> {
+    const variableContext = this.variableService.buildVariableContext({
+      automation: execContext.automation,
+      triggerData: execContext.triggerData,
+      actionResults: execContext.variables.action_results,
+    });
+
+    return this.recipientService.resolveRecipients(context, recipients, {
+      tableId: execContext.automation.fk_model_id || '',
+      recordData: execContext.variables.record,
+      variableContext,
+    });
   }
 
   /**
@@ -669,5 +785,110 @@ export class AutomationExecutorService {
       config: action.config,
       record: execContext.variables.record,
     };
+  }
+
+  /**
+   * 执行脚本动作
+   */
+  private async executeScript(
+    execContext: ExecutionContext,
+    action: AutomationActionType,
+  ): Promise<ActionResult> {
+    const { testMode } = execContext;
+    const config = action.config as ActionConfig;
+
+    if (!config.script_code) {
+      return { success: false, error: '未提供脚本代码' };
+    }
+
+    // 构建脚本执行上下文
+    const scriptContext = {
+      record: execContext.variables.record,
+      previous_record: execContext.variables.previous_record,
+      trigger: execContext.variables.trigger,
+      action_results: execContext.variables.action_results,
+      system: execContext.variables.system,
+      params: config.script_params || {},
+    };
+
+    if (testMode) {
+      return {
+        success: true,
+        output: {
+          testMode: true,
+          scriptId: config.script_id,
+          context: scriptContext,
+        },
+      };
+    }
+
+    try {
+      // 使用 Function 构造器创建沙箱执行环境
+      // 注意：这是一个简化的实现，生产环境应该使用更安全的沙箱
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+      
+      // 包装脚本代码，提供 context 变量
+      const wrappedCode = `
+        const context = arguments[0];
+        const record = context.record;
+        const previous_record = context.previous_record;
+        const trigger = context.trigger;
+        const action_results = context.action_results;
+        const system = context.system;
+        const params = context.params;
+        
+        ${config.script_code}
+      `;
+
+      const scriptFn = new AsyncFunction(wrappedCode);
+      
+      // 设置执行超时
+      const timeoutMs = 30000; // 30 秒超时
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('脚本执行超时')), timeoutMs);
+      });
+
+      const result = await Promise.race([
+        scriptFn(scriptContext),
+        timeoutPromise,
+      ]);
+
+      // 处理返回结果
+      // 保持脚本返回的完整结构，使 action_results 中的数据与脚本返回一致
+      if (result && typeof result === 'object') {
+        if ('success' in result) {
+          // 脚本返回了标准格式 { success, data, error }
+          // 直接将完整返回对象存入 output，保持数据结构一致性
+          return {
+            success: result.success,
+            output: result,  // 保留完整的返回对象
+            error: result.error,
+          };
+        }
+        // 脚本返回了普通对象，包装成标准格式
+        return {
+          success: true,
+          output: {
+            success: true,
+            data: result,
+          },
+        };
+      }
+
+      // 脚本返回了非对象值
+      return {
+        success: true,
+        output: {
+          success: true,
+          data: result,
+        },
+      };
+    } catch (error: any) {
+      this.logger.error(`Script execution error: ${error.message}`, error.stack);
+      return {
+        success: false,
+        error: `脚本执行失败: ${error.message}`,
+      };
+    }
   }
 }

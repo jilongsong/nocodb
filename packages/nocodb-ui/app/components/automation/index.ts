@@ -13,9 +13,16 @@ export { ActionConfigV2 } from "./action/ActionConfigV2";
 export { RecordCreateConfig } from "./action/RecordCreateConfig";
 export { WebhookConfig } from "./action/WebhookConfig";
 export { EmailConfig } from "./action/EmailConfig";
+export { EnhancedMessagingConfig } from "./action/EnhancedMessagingConfig";
+export { HttpRequestConfig } from "./action/HttpRequestConfig";
+export { ScriptConfig } from "./action/ScriptConfig";
 
 // Shared Components
 export { VariablePicker } from "./shared/VariablePicker";
+export { EnhancedVariablePicker } from "./shared/EnhancedVariablePicker";
+export { RecipientPicker } from "./shared/RecipientPicker";
+export { TableRecordPicker } from "./shared/TableRecordPicker";
+export type { TableInfo, ColumnInfo, RecordItem, TableRecordPickerProps } from "./shared/TableRecordPicker";
 export { TemplateEditor } from "./shared/TemplateEditor";
 export { FieldSelector } from "./shared/FieldSelector";
 export { TableSelector } from "./shared/TableSelector";

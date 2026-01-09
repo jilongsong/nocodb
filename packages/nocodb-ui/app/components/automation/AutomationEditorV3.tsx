@@ -100,6 +100,7 @@ export function AutomationEditorV3({
         conditions: trigger.conditions,
       },
       actions: actions.map((action, index) => ({
+        id: action.id,  // 保留 action ID，确保脚本引用稳定
         type: action.type,
         order: index,
         config: action.config,
@@ -280,13 +281,16 @@ export function AutomationEditorV3({
             ) : selectedAction ? (
               <ActionConfigV2
                 action={selectedAction}
+                actionIndex={actions.findIndex(a => a.id === selectedAction.id)}
                 baseId={baseId}
                 tableId={tableId}
                 tables={tables}
                 triggerFields={fields}
+                triggerType={trigger.type}
                 getFieldsForTable={getFieldsForTable}
                 onChange={(updates) => handleUpdateAction(selectedAction.id, updates)}
                 onDelete={() => handleDeleteAction(selectedAction.id)}
+                allActions={actions}
               />
             ) : (
               <div className="flex items-center justify-center h-full text-gray-400">

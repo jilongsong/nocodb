@@ -113,6 +113,7 @@ export default class AutomationAction implements AutomationActionType {
     ncMeta = Noco.ncMeta,
   ): Promise<AutomationAction> {
     const insertObj = extractProps(action, [
+      'id',  // 支持保留前端传入的 ID
       'fk_automation_id',
       'type',
       'title',

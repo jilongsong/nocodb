@@ -36,30 +36,43 @@ export const TRIGGER_CATEGORIES = {
 // 动作标签
 export const ACTION_LABELS: Record<ActionType, string> = {
   "record.create": "创建记录",
+  "record.update": "更新记录",
+  "record.delete": "删除记录",
+  "http.request": "HTTP 请求",
   "notification.email": "发送邮件",
   "notification.webhook": "调用 Webhook",
   "notification.slack": "发送 Slack 消息",
   "notification.feishu": "发送飞书消息",
   "notification.dingtalk": "发送钉钉消息",
   "notification.wechat": "发送企业微信消息",
+  "condition.if": "条件分支",
+  "loop.foreach": "循环遍历",
+  "variable.set": "设置变量",
   "script.run": "运行脚本",
 };
 
 // 动作描述
 export const ACTION_DESCRIPTIONS: Record<ActionType, string> = {
   "record.create": "在当前表或其他表创建新记录",
+  "record.update": "更新符合条件的记录",
+  "record.delete": "删除符合条件的记录",
+  "http.request": "发送 HTTP 请求并获取响应数据",
   "notification.email": "发送电子邮件通知",
   "notification.webhook": "发送 HTTP 请求到外部服务",
   "notification.slack": "发送消息到 Slack 频道",
   "notification.feishu": "发送消息到飞书群组",
   "notification.dingtalk": "发送消息到钉钉群组",
   "notification.wechat": "发送消息到企业微信群组",
+  "condition.if": "根据条件执行不同的分支",
+  "loop.foreach": "遍历数组或记录列表执行动作",
+  "variable.set": "设置自定义变量供后续使用",
   "script.run": "执行自定义 JavaScript 脚本",
 };
 
 // 动作分类
 export const ACTION_CATEGORIES = {
-  record: ["record.create"],
+  record: ["record.create", "record.update", "record.delete"],
+  http: ["http.request"],
   notification: [
     "notification.email",
     "notification.webhook",
@@ -68,13 +81,16 @@ export const ACTION_CATEGORIES = {
     "notification.dingtalk",
     "notification.wechat",
   ],
+  flow: ["condition.if", "loop.foreach", "variable.set"],
   advanced: ["script.run"],
 } as const;
 
 // 动作分类标签
 export const ACTION_CATEGORY_LABELS = {
   record: "记录操作",
-  notification: "通知",
+  http: "HTTP 请求",
+  notification: "通知推送",
+  flow: "流程控制",
   advanced: "高级",
 } as const;
 

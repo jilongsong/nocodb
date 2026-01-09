@@ -47,12 +47,18 @@ export interface AutomationTrigger {
 
 export type ActionType =
   | "record.create" // 创建新记录
+  | "record.update" // 更新记录
+  | "record.delete" // 删除记录
+  | "http.request" // HTTP 请求（通用）
   | "notification.email" // 发送邮件
   | "notification.webhook" // 调用 Webhook
   | "notification.slack" // 发送 Slack 消息
   | "notification.feishu" // 发送飞书消息
   | "notification.dingtalk" // 发送钉钉消息
   | "notification.wechat" // 发送企业微信消息
+  | "condition.if" // 条件分支
+  | "loop.foreach" // 循环遍历
+  | "variable.set" // 设置变量
   | "script.run"; // 运行脚本
 
 export type ActionErrorBehavior = "stop" | "continue" | "retry";
@@ -81,8 +87,21 @@ export interface ActionConfig {
   webhook_headers?: Record<string, string>;
   webhook_body_template?: string;
 
+  // 消息通知增强配置
+  message_type?: "text" | "post" | "interactive" | "markdown" | "actionCard" | "news" | "blocks";
+  title_template?: string;
+  mention_users?: string[];           // @提醒用户列表
+  security_token?: string;            // 安全签名密钥（钉钉）
+  result_variable_name?: string;      // 结果变量名（用于后续引用）
+
+  // HTTP 请求增强配置
+  response_variable_name?: string;    // HTTP 响应变量名
+  timeout_ms?: number;                // 超时时间（毫秒）
+  retry_on_fail?: boolean;            // 失败重试
+
   // 脚本配置
   script_id?: string;
+  script_code?: string;
   script_params?: Record<string, unknown>;
 }
 

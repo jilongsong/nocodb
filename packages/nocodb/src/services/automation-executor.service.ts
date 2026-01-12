@@ -186,22 +186,91 @@ export class AutomationExecutorService {
   }
 
   /**
-   * 执行单个动作
+   * 执行单个动作（支持重试）
    */
   private async executeAction(
     execContext: ExecutionContext,
     action: AutomationActionType,
   ): Promise<ActionResult> {
+    const onError = action.on_error || 'stop';
+    const maxRetries = onError === 'retry' ? (action.retry_count || 3) : 1;
+    const retryDelay = (action.retry_delay_seconds || 5) * 1000;
+    
+    let lastResult: ActionResult = { success: false, error: 'No execution attempted' };
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      const isRetry = attempt > 1;
+      
+      try {
+        lastResult = await this.executeActionOnce(execContext, action, attempt, maxRetries);
+        
+        // 执行成功，直接返回
+        if (lastResult.success || lastResult.skipped) {
+          return lastResult;
+        }
+        
+        // 执行失败但未抛异常（业务逻辑失败）
+        lastError = new Error(lastResult.error || 'Action failed');
+        
+        // 如果还有重试机会，等待后继续
+        if (onError === 'retry' && attempt < maxRetries) {
+          this.logger.warn(`Action ${action.id} failed (attempt ${attempt}/${maxRetries}): ${lastResult.error}`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        
+        // 没有重试或重试用尽，根据策略处理
+        break;
+      } catch (error: any) {
+        lastError = error;
+        lastResult = { success: false, error: error.message };
+        
+        // 如果还有重试机会，等待后继续
+        if (onError === 'retry' && attempt < maxRetries) {
+          this.logger.warn(`Action ${action.id} threw error (attempt ${attempt}/${maxRetries}): ${error.message}`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          continue;
+        }
+        
+        // 没有重试或重试用尽
+        break;
+      }
+    }
+
+    // 根据错误处理策略决定后续行为
+    if (onError === 'stop') {
+      throw lastError || new Error(lastResult.error || 'Action failed');
+    }
+    
+    // continue 或 retry（重试用尽后继续）：返回失败结果但不中断流程
+    return lastResult;
+  }
+
+  /**
+   * 执行单个动作（单次尝试）
+   */
+  private async executeActionOnce(
+    execContext: ExecutionContext,
+    action: AutomationActionType,
+    attemptNumber: number = 1,
+    maxAttempts: number = 1,
+  ): Promise<ActionResult> {
     const { context, logId } = execContext;
     const startTime = Date.now();
+    const isRetry = attemptNumber > 1;
 
     // 创建动作日志
     const actionLog = await AutomationLog.insertActionLog(context, {
       fk_automation_log_id: logId,
       fk_action_id: action.id,
       action_type: action.type,
-      status: 'running',
-      input: this.prepareActionInput(execContext, action),
+      status: isRetry ? 'retrying' : 'running',
+      input: { 
+        ...this.prepareActionInput(execContext, action), 
+        attempt: attemptNumber,
+        max_attempts: maxAttempts,
+      },
       started_at: new Date().toISOString(),
     });
 
@@ -232,10 +301,12 @@ export class AutomationExecutorService {
           result = { success: false, error: `Unknown action type: ${action.type}` };
       }
 
-      // 保存动作结果到变量
-      if (result.success && result.output) {
-        execContext.variables.action_results[action.id!] = result.output;
-      }
+      // 保存动作结果到变量（无论成功失败都保存，便于后续动作判断）
+      execContext.variables.action_results[action.id!] = {
+        success: result.success,
+        output: result.output,
+        error: result.error,
+      };
 
       // 更新动作日志
       const duration = Date.now() - startTime;
@@ -247,14 +318,6 @@ export class AutomationExecutorService {
         duration_ms: duration,
       });
 
-      // 错误处理
-      if (!result.success && !result.skipped) {
-        if (action.on_error === 'stop') {
-          throw new Error(result.error || 'Action failed');
-        }
-        // on_error === 'continue' 时继续执行
-      }
-
       return result;
     } catch (error: any) {
       const duration = Date.now() - startTime;
@@ -265,11 +328,13 @@ export class AutomationExecutorService {
         duration_ms: duration,
       });
 
-      if (action.on_error === 'stop') {
-        throw error;
-      }
+      // 保存错误结果到变量
+      execContext.variables.action_results[action.id!] = {
+        success: false,
+        error: error.message,
+      };
 
-      return { success: false, error: error.message };
+      throw error; // 向上抛出，由 executeAction 处理
     }
   }
 

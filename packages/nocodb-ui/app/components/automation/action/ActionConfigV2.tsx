@@ -21,7 +21,7 @@ import { Button } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { Select } from "@/app/components/ui/Select";
 import { RecordCreateConfig } from "./RecordCreateConfig";
-import { WebhookConfig } from "./WebhookConfig";
+import { WebhookConfigV2 } from "./WebhookConfigV2";
 import { EmailConfig } from "./EmailConfig";
 import { EnhancedMessagingConfig } from "./EnhancedMessagingConfig";
 import { HttpRequestConfig } from "./HttpRequestConfig";
@@ -157,6 +157,7 @@ export function ActionConfigV2({
         actionId: a.id,
         actionLabel: actionMeta[a.type]?.label || a.type,
         actionType: a.type,
+        
         actionOrder: idx,
         outputSchema: {
           type: "object" as const,
@@ -249,7 +250,15 @@ export function ActionConfigV2({
 
         {/* Webhook */}
         {action.type === "notification.webhook" && (
-          <WebhookConfig config={action.config} onChange={handleConfigChange} />
+          <WebhookConfigV2
+            config={action.config}
+            onChange={handleConfigChange}
+            fields={fields}
+            actionResults={actionResults}
+            triggerType={triggerType}
+            currentActionOrder={actionIndex}
+            actionId={action.id}
+          />
         )}
 
         {/* HTTP Request */}
@@ -301,12 +310,56 @@ export function ActionConfigV2({
 
         {/* Error Handling Section */}
         <div className="pt-4 border-t border-gray-100">
-          <label className="text-sm font-medium text-gray-700 mb-2 block">错误处理</label>
-          <Select
-            value={action.on_error || "stop"}
-            onChange={(v) => onChange({ on_error: v as ActionErrorBehavior })}
-            options={errorBehaviorOptions.map((opt) => ({ value: opt.value, label: opt.label }))}
-          />
+          <div className="flex items-center gap-2 mb-2">
+            <AlertCircle className="w-4 h-4 text-gray-400" />
+            <label className="text-sm font-medium text-gray-700">错误处理</label>
+          </div>
+          
+          <div className="space-y-3">
+            <Select
+              value={action.on_error || "stop"}
+              onChange={(v) => onChange({ on_error: v as ActionErrorBehavior })}
+              options={errorBehaviorOptions.map((opt) => ({ value: opt.value, label: opt.label }))}
+            />
+            
+            {/* 错误处理说明 */}
+            <p className="text-xs text-gray-400">
+              {action.on_error === "stop" && "发生错误时停止整个自动化流程"}
+              {action.on_error === "continue" && "忽略错误，继续执行后续动作"}
+              {action.on_error === "retry" && "自动重试当前动作，失败后继续执行"}
+              {!action.on_error && "发生错误时停止整个自动化流程"}
+            </p>
+
+            {/* 重试配置 */}
+            {action.on_error === "retry" && (
+              <div className="p-3 bg-gray-50 rounded-lg space-y-3">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm text-gray-600 w-20">重试次数</label>
+                  <Input
+                    type="number"
+                    value={action.retry_count || 3}
+                    onChange={(e) => onChange({ retry_count: parseInt(e.target.value) || 3 })}
+                    className="w-20 text-sm"
+                    min={1}
+                    max={10}
+                  />
+                  <span className="text-xs text-gray-400">次 (1-10)</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm text-gray-600 w-20">重试间隔</label>
+                  <Input
+                    type="number"
+                    value={action.retry_delay_seconds || 5}
+                    onChange={(e) => onChange({ retry_delay_seconds: parseInt(e.target.value) || 5 })}
+                    className="w-20 text-sm"
+                    min={1}
+                    max={60}
+                  />
+                  <span className="text-xs text-gray-400">秒 (1-60)</span>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

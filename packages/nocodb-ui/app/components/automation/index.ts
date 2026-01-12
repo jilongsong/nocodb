@@ -16,6 +16,7 @@ export { EmailConfig } from "./action/EmailConfig";
 export { EnhancedMessagingConfig } from "./action/EnhancedMessagingConfig";
 export { HttpRequestConfig } from "./action/HttpRequestConfig";
 export { ScriptConfig } from "./action/ScriptConfig";
+export { WebhookConfigV2 } from "./action/WebhookConfigV2";
 
 // Shared Components
 export { VariablePicker } from "./shared/VariablePicker";

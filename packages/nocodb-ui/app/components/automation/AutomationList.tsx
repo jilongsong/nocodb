@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Plus, Search, Zap, Loader2 } from "lucide-react";
 import { Button } from "@/app/components/ui/Button";
 import { Input } from "@/app/components/ui/Input";
 import { Modal, ConfirmModal } from "@/app/components/ui/Modal";
 import { AutomationCard } from "./AutomationCard";
 import { useAutomation } from "@/app/composables/useAutomation";
+import { useTables } from "@/app/composables/useTables";
 import type { Automation } from "@/app/composables/useAutomation/types";
 
 interface AutomationListProps {
@@ -34,14 +35,27 @@ export function AutomationList({
     deleteAutomation,
   } = useAutomation(baseId);
 
+  const { baseTables, loadProjectTables } = useTables();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<Automation | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  // 加载表格列表
+  useEffect(() => {
+    loadProjectTables(baseId);
+  }, [baseId, loadProjectTables]);
 
   // 加载自动化列表
   useEffect(() => {
     loadAutomations({ baseId, tableId });
   }, [baseId, tableId, loadAutomations]);
+
+  // 创建表格ID到名称的映射
+  const tableNameMap = useMemo(() => {
+    const tables = baseTables.get(baseId) || [];
+    return new Map(tables.map((t) => [t.id, t.title || (t as any).table_name || t.id]));
+  }, [baseTables, baseId]);
 
   // 过滤列表
   const filteredAutomations = automationsList.filter((automation) => {
@@ -64,6 +78,8 @@ export function AutomationList({
         groups[key].push(automation);
         return groups;
       }, {} as Record<string, Automation[]>);
+
+      console.log(groupedAutomations);
 
   // 处理删除
   const handleDelete = async () => {
@@ -156,7 +172,7 @@ export function AutomationList({
               <div key={groupId}>
                 {!tableId && (
                   <h3 className="text-sm font-medium text-gray-500 mb-3">
-                    表格 ID: {groupId}
+                    {tableNameMap.get(groupId) || groupId}
                   </h3>
                 )}
                 <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">

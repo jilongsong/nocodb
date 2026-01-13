@@ -339,7 +339,7 @@ export class AutomationExecutorService {
   }
 
   /**
-   * 执行记录创建动作
+   * 执行记录创建动作（支持 upsert 模式）
    */
   private async executeRecordCreate(
     execContext: ExecutionContext,
@@ -353,19 +353,44 @@ export class AutomationExecutorService {
       return { success: false, error: 'No target table specified' };
     }
 
+    const saveMode = config.save_mode || 'create';
+    const upsertKeyFieldId = config.upsert_key_field_id;
+    const includeMetadata = config.include_metadata === true;
+
     // 构建创建数据 - 需要将字段ID转换为字段名称
     const createData = await this.buildFieldMappingDataWithColumnNames(
       execContext,
       config.field_mappings || [],
       tableId,
+      config, // 传递 config 以便解析 source_action_id
     );
 
-    this.logger.log(`Record create data: ${JSON.stringify(createData)}`);
+    // 添加元数据（如果启用）
+    if (includeMetadata) {
+      const metadataFields: Record<string, any> = {
+        _automation_id: execContext.automation.id,
+        _automation_name: execContext.automation.title,
+        _executed_at: new Date().toISOString(),
+        _trigger_type: execContext.variables.trigger.type,
+      };
+      const targetModel = await Model.get(context, tableId);
+      if (targetModel) {
+        const targetColumns = await targetModel.getColumns(context);
+        const targetColumnNames = new Set(targetColumns.map((c: any) => c.title?.toLowerCase()));
+        for (const [key, value] of Object.entries(metadataFields)) {
+          if (targetColumnNames.has(key.toLowerCase())) {
+            createData[key] = value;
+          }
+        }
+      }
+    }
+
+    this.logger.log(`Record create data: ${JSON.stringify(createData)}, mode: ${saveMode}`);
 
     if (testMode) {
       return {
         success: true,
-        output: { testMode: true, createData, tableId },
+        output: { testMode: true, createData, tableId, saveMode },
       };
     }
 
@@ -382,22 +407,60 @@ export class AutomationExecutorService {
         source,
       });
 
-      const result = await baseModel.insert(createData, null, null);
+      let result: any;
+      let isUpdate = false;
 
-      // 标记为自动化创建的记录，防止无限循环
-      const recordId = result?.Id || result?.id;
-      if (recordId) {
-        AutomationTriggerService.markAsAutomationCreated(tableId, recordId);
+      // Upsert 模式：先查找是否存在匹配记录
+      if (saveMode === 'upsert' && upsertKeyFieldId) {
+        const targetColumns = await model.getColumns(context);
+        const keyColumn = targetColumns.find((c: any) => c.id === upsertKeyFieldId);
+        
+        if (keyColumn) {
+          const keyValue = createData[keyColumn.title] || createData[keyColumn.column_name];
+          
+          if (keyValue !== undefined && keyValue !== null) {
+            // 查找匹配记录
+            const existingRecords = await baseModel.list({
+              where: `(${keyColumn.column_name},eq,${keyValue})`,
+              limit: 1,
+            });
+
+            if (existingRecords?.list?.length > 0) {
+              // 更新已有记录
+              const existingId = existingRecords.list[0].Id || existingRecords.list[0].id;
+              result = await baseModel.updateByPk(existingId, createData, null, null);
+              isUpdate = true;
+              this.logger.log(`Record updated: ${existingId}`);
+            }
+          }
+        }
+      }
+
+      // 如果不是 upsert 模式或没有找到匹配记录，则创建新记录
+      if (!result) {
+        result = await baseModel.insert(createData, null, null);
+        
+        // 标记为自动化创建的记录，防止无限循环
+        const recordId = result?.Id || result?.id;
+        if (recordId) {
+          AutomationTriggerService.markAsAutomationCreated(tableId, recordId);
+        }
       }
 
       return {
         success: true,
-        output: { created: true, record: result },
+        output: {
+          created: !isUpdate,
+          updated: isUpdate,
+          record: result,
+          mode: isUpdate ? 'updated' : 'created',
+        },
       };
     } catch (error: any) {
       return { success: false, error: error.message };
     }
   }
+
 
   /**
    * 执行邮件通知动作
@@ -673,6 +736,7 @@ export class AutomationExecutorService {
     execContext: ExecutionContext,
     fieldMappings: any[],
     targetTableId: string,
+    actionConfig?: any,
   ): Promise<Record<string, any>> {
     const { context } = execContext;
     const data: Record<string, any> = {};
@@ -744,7 +808,24 @@ export class AutomationExecutorService {
           value = this.resolveTemplate(execContext, formula || '');
           break;
         case 'variable':
-          value = this.resolveVariable(execContext, static_value || '');
+          // 解析变量路径，支持简化的 result.xxx 格式
+          let variablePath = static_value || '';
+          
+          // 如果路径以 result. 开头，需要映射到实际的 action_results 路径
+          // result.xxx -> action_results[source_action_id].output.xxx
+          // response.xxx -> action_results[source_action_id].output.xxx
+          if (variablePath.startsWith('result.') || variablePath.startsWith('response.')) {
+            // 从 action config 中获取 source_action_id
+            const sourceActionId = actionConfig?.source_action_id;
+            if (sourceActionId) {
+              // 移除 result. 或 response. 前缀，映射到正确的路径
+              const restPath = variablePath.replace(/^(result|response)\./, '');
+              variablePath = `action_results.${sourceActionId}.output.${restPath}`;
+              this.logger.log(`Variable path mapped: ${static_value} -> ${variablePath}`);
+            }
+          }
+          
+          value = this.resolveVariable(execContext, variablePath);
           break;
         default:
           value = static_value;
@@ -866,6 +947,11 @@ export class AutomationExecutorService {
       return { success: false, error: '未提供脚本代码' };
     }
 
+    // 获取前一个动作的结果（用于 result 快捷访问）
+    const actionResultKeys = Object.keys(execContext.variables.action_results);
+    const lastActionId = actionResultKeys.length > 0 ? actionResultKeys[actionResultKeys.length - 1] : null;
+    const lastActionResult = lastActionId ? execContext.variables.action_results[lastActionId] : null;
+    
     // 构建脚本执行上下文
     const scriptContext = {
       record: execContext.variables.record,
@@ -874,6 +960,8 @@ export class AutomationExecutorService {
       action_results: execContext.variables.action_results,
       system: execContext.variables.system,
       params: config.script_params || {},
+      // 添加 result 快捷变量，指向前一个动作的输出
+      result: lastActionResult?.output || null,
     };
 
     if (testMode) {
@@ -901,6 +989,7 @@ export class AutomationExecutorService {
         const action_results = context.action_results;
         const system = context.system;
         const params = context.params;
+        const result = context.result;
         
         ${config.script_code}
       `;

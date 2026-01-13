@@ -504,29 +504,26 @@ export function ScriptConfig({
             <div>
               <p className="font-medium text-gray-600 mb-2">可用上下文变量</p>
               <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                <div><code className="px-1 bg-white rounded">context.record</code> - 当前记录</div>
-                <div><code className="px-1 bg-white rounded">context.trigger</code> - 触发器信息</div>
-                <div><code className="px-1 bg-white rounded">context.params</code> - 脚本参数</div>
-                <div><code className="px-1 bg-white rounded">context.action_results</code> - 前置动作结果</div>
-                <div><code className="px-1 bg-white rounded">context.system</code> - 系统信息</div>
-                <div><code className="px-1 bg-white rounded">context.previous_record</code> - 更新前记录</div>
+                <div><code className="px-1 bg-white rounded">record</code> - 当前记录</div>
+                <div><code className="px-1 bg-white rounded">result</code> - 前置动作结果</div>
+                <div><code className="px-1 bg-white rounded">trigger</code> - 触发器信息</div>
+                <div><code className="px-1 bg-white rounded">params</code> - 脚本参数</div>
+                <div><code className="px-1 bg-white rounded">system</code> - 系统信息</div>
               </div>
             </div>
             <div className="border-t border-gray-200 pt-2">
-              <p className="font-medium text-gray-600 mb-1">脚本返回值说明</p>
-              <p className="text-gray-500 mb-1">
-                脚本返回值会完整保存到 <code className="px-1 bg-white rounded">action_results[actionId]</code>
-              </p>
+              <p className="font-medium text-gray-600 mb-1">前置动作结果访问</p>
               <pre className="bg-white p-2 rounded text-xs overflow-x-auto">{`// 推荐的返回格式
 return {
   success: true,
-  data: { /* 你的数据 */ }
+  data: { name: "张三", age: 25 }
 };
 
-// 后续脚本访问方式
-const prevResult = action_results['前置动作ID'];
-console.log(prevResult.success); // true
-console.log(prevResult.data);    // 你的数据`}</pre>
+// 后续脚本访问（统一使用 result）
+console.log(result.success);    // true
+console.log(result.data);       // { name: "张三", age: 25 }
+console.log(result.data.name);  // "张三"
+`}</pre>
             </div>
           </div>
         </div>

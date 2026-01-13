@@ -46,7 +46,7 @@ export interface AutomationTrigger {
 // ==================== 动作类型 ====================
 
 export type ActionType =
-  | "record.create" // 创建新记录
+  | "record.create" // 创建新记录（支持 upsert 模式）
   | "record.update" // 更新记录
   | "record.delete" // 删除记录
   | "http.request" // HTTP 请求（通用）
@@ -78,6 +78,14 @@ export interface ActionConfig {
   field_mappings?: FieldMapping[];
   record_filter?: FilterGroup;
 
+  // 保存记录配置（将自动化结果保存到指定表格）
+  save_mode?: "create" | "upsert";    // 保存模式：创建新记录 / 更新或创建
+  upsert_key_field_id?: string;       // Upsert 时的唯一键字段
+  data_source?: "trigger" | "action_result"; // 数据来源
+  source_action_id?: string;          // 来源动作ID（当 data_source 为 action_result 时）
+  auto_map_fields?: boolean;          // 是否自动映射同名字段
+  include_metadata?: boolean;         // 是否包含元数据（执行时间、自动化ID等）
+
   // 通知操作配置
   recipients?: string[];
   subject_template?: string;
@@ -108,6 +116,7 @@ export interface ActionConfig {
 export interface AutomationAction {
   id: string;
   type: ActionType;
+  title?: string;  // 动作标题（可选）
   order: number;
   config: ActionConfig;
   on_error: ActionErrorBehavior;

@@ -20,6 +20,15 @@ export interface ActionConfig {
     formula?: string;
   }>;
   record_filter?: Record<string, any>;
+
+  // 保存记录配置
+  save_mode?: 'create' | 'upsert';           // 保存模式：创建新记录 / 更新或创建
+  upsert_key_field_id?: string;              // Upsert 时的唯一键字段
+  data_source?: 'trigger' | 'action_result'; // 数据来源
+  source_action_id?: string;                 // 来源动作ID（当 data_source 为 action_result 时）
+  auto_map_fields?: boolean;                 // 是否自动映射同名字段
+  include_metadata?: boolean;                // 是否包含元数据
+
   recipients?: string[];
   subject_template?: string;
   body_template?: string;

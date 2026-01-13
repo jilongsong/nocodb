@@ -575,6 +575,7 @@ export class AutomationVariableService {
 
   /**
    * 构建 HTTP 动作的输出变量
+   * 输出格式与脚本保持一致: { success, data, ... }
    */
   buildHttpActionOutput(response: {
     status: number;
@@ -582,18 +583,25 @@ export class AutomationVariableService {
     headers: Record<string, string>;
     data: any;
   }): ActionResult {
+    const isSuccess = response.status >= 200 && response.status < 300;
+    // 统一输出格式，与脚本保持一致
+    // result.success - 是否成功
+    // result.data - 响应体数据
+    // result.status/statusText/headers - HTTP 特有信息
+    const output = {
+      success: isSuccess,
+      data: response.data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    };
     return {
-      success: response.status >= 200 && response.status < 300,
+      success: isSuccess,
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
       data: response.data,
-      output: {
-        status: response.status,
-        statusText: response.statusText,
-        headers: response.headers,
-        data: response.data,
-      },
+      output,
     };
   }
 

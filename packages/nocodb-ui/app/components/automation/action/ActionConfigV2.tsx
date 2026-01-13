@@ -240,6 +240,8 @@ export function ActionConfigV2({
             currentTableId={tableId}
             getFieldsForTable={getFieldsForTable}
             triggerFields={triggerFields}
+            allActions={allActions}
+            actionIndex={actionIndex}
           />
         )}
 

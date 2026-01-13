@@ -62,12 +62,18 @@ const triggerLabels: Record<TriggerType, string> = {
 // Labels for actions
 const actionLabels: Record<ActionType, string> = {
   "record.create": "创建记录",
+  "record.update": "更新记录",
+  "record.delete": "删除记录",
+  "http.request": "HTTP 请求",
   "notification.email": "发送邮件",
   "notification.webhook": "调用 Webhook",
   "notification.slack": "发送 Slack",
   "notification.feishu": "发送飞书",
   "notification.dingtalk": "发送钉钉",
   "notification.wechat": "发送企微",
+  "condition.if": "条件分支",
+  "loop.foreach": "循环遍历",
+  "variable.set": "设置变量",
   "script.run": "运行脚本",
 };
 

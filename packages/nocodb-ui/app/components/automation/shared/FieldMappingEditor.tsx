@@ -17,6 +17,8 @@ interface FieldMappingEditorProps {
   sourceFields: FieldInfo[];
   targetFields: FieldInfo[];
   mode?: "update" | "create";
+  showVariableOption?: boolean; // 是否显示变量选项（用于动作结果数据源）
+  variablePrefix?: string; // 变量路径前缀提示，如 "result" 或 "response"
 }
 
 function generateId() {
@@ -28,6 +30,8 @@ export function FieldMappingEditor({
   onChange,
   sourceFields,
   targetFields,
+  showVariableOption = false,
+  variablePrefix = "result",
 }: FieldMappingEditorProps) {
   const unmappedFields = useMemo(() => {
     const mappedIds = new Set(mappings.map((m) => m.target_field_id));
@@ -70,6 +74,8 @@ export function FieldMappingEditor({
             sourceFieldOptions={sourceFieldOptions}
             onUpdate={(updates) => handleUpdate(mapping.id, updates)}
             onDelete={() => handleDelete(mapping.id)}
+            showVariableOption={showVariableOption}
+            variablePrefix={variablePrefix}
           />
         );
       })}
@@ -105,6 +111,8 @@ interface MappingItemProps {
   sourceFieldOptions: Array<{ value: string; label: string }>;
   onUpdate: (updates: Partial<FieldMapping>) => void;
   onDelete: () => void;
+  showVariableOption?: boolean;
+  variablePrefix?: string;
 }
 
 function MappingItem({
@@ -113,7 +121,21 @@ function MappingItem({
   sourceFieldOptions,
   onUpdate,
   onDelete,
+  showVariableOption = false,
+  variablePrefix = "result",
 }: MappingItemProps) {
+  // 值类型选项
+  const valueTypeOptions = useMemo(() => {
+    const options = [
+      { value: "field", label: "字段" },
+      { value: "static", label: "固定值" },
+    ];
+    if (showVariableOption) {
+      options.push({ value: "variable", label: "变量" });
+    }
+    return options;
+  }, [showVariableOption]);
+
   return (
     <div className="flex items-center gap-2 group">
       {/* Target field label */}
@@ -133,12 +155,19 @@ function MappingItem({
             placeholder="选择来源字段"
             size="sm"
           />
+        ) : mapping.value_type === "variable" ? (
+          <Input
+            value={mapping.static_value || ""}
+            onChange={(e) => onUpdate({ static_value: e.target.value })}
+            placeholder={`${variablePrefix}.data.字段名`}
+            className="py-1.5 text-sm font-mono text-indigo-600"
+          />
         ) : (
           <Input
             value={mapping.static_value || ""}
             onChange={(e) => onUpdate({ static_value: e.target.value })}
             placeholder="输入固定值"
-            className="!py-1.5 text-sm"
+            className="py-1.5 text-sm"
           />
         )}
       </div>
@@ -147,10 +176,7 @@ function MappingItem({
       <Select
         value={mapping.value_type}
         onChange={(v) => onUpdate({ value_type: v as FieldMapping["value_type"] })}
-        options={[
-          { value: "field", label: "字段" },
-          { value: "static", label: "固定值" },
-        ]}
+        options={valueTypeOptions}
         size="sm"
         className="w-24"
       />
@@ -160,7 +186,7 @@ function MappingItem({
         variant="ghost"
         size="sm"
         onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 !p-1.5"
+        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-1.5"
       >
         <Trash2 className="w-4 h-4" />
       </Button>
